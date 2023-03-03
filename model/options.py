@@ -7,7 +7,9 @@ class RecSysOptions():
         self.model_name = 'model'
         self.model_extention = 'csv'
         self.model_store = './store'
-        self.model_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
+        self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
+
+        print(self.model_data_path)
 
         # warm-up data
         self.train_data_folder = os.path.join(os.getcwd(), "../data/train/")
@@ -34,7 +36,7 @@ class RecSysOptions():
 
     def renew_model_name_and_path(self, model_name: str):
         self.model_name = model_name
-        self.model_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
+        self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
         return self.model_path
 
 
