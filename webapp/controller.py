@@ -10,9 +10,11 @@ from threading import Lock
 import json
 
 from pydotplus import basestring
+from webapp.service import Service
 
 LOCK = Lock()
 app = Flask(__name__)
+service = Service()
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -66,6 +68,8 @@ def log():
     # try exept
     # with open("app.log", "r") as log_f:
     #     logs_tail = log_f.readlines()[-20:]
+
+    print(service.hello('hello hui'))
 
     if LOCK.locked():
         return make_response(jsonify({'error': 'Processing in progress!'}), 403)

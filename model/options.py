@@ -22,7 +22,7 @@ class RecSysOptions():
         self.test_data_path = os.path.join(self.test_data_folder, 'ratings_test.dat')
 
         # training
-        self.n_vectors = 150
+        self.n_vectors = 30
 
         # proceeeding
         self.data_loading_sep = '::'
@@ -32,6 +32,7 @@ class RecSysOptions():
 
         # suprise
         self.rating_scale = (1, 5)
+        self.n_epochs = 20
 
 
     def renew_model_name_and_path(self, model_name: str):
