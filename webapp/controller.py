@@ -33,7 +33,7 @@ def predict():
             if 'M' in request_data:
                 m = request_data['M']
 
-            if not isinstance(m, int) or (isinstance(m, int) and m > 50):
+            if not isinstance(m, int) or (isinstance(m, int) and (m < 1 or m > 25)):
                 m = 20
 
             if not isinstance(movie_names_ratings, list):
@@ -57,11 +57,17 @@ def predict():
             return make_response(jsonify({'message': 'Invalid JSON data'}), 400)
 
         try:
-            # call func
-            return make_response(jsonify({'message': 'Call servise func predict'},
-                                         {'data': [movie_names, ratings, m]}), 200)
-        except:
+            print('cintr pred', service.model)
+            print([movie_names, ratings], m)
+            result = service.predict([movie_names, ratings], m)
+            return make_response(jsonify(result), 200)
+        except Exception as e:
+            print(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
+
+
+
+#
 
 @app.route('/api/log', methods=['GET'])
 def log():
@@ -102,7 +108,7 @@ def reload():
 
     with LOCK:
         try:
-            # run service func
+            service.reload()
             return make_response(jsonify({'Result': "Model successfully reloaded!"}))
         except:
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
@@ -135,9 +141,8 @@ def similar():
             return make_response(jsonify({'message': 'Invalid JSON data'}), 400)
 
         try:
-            # call func
-            return make_response(jsonify({'message': 'Call servise func similar'},
-                                         {'data': [movie_name, n]}), 200)
+            output = service.similair(movie_name, n)
+            return make_response(jsonify(output), 200)
         except:
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 

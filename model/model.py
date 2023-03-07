@@ -45,13 +45,15 @@ class RecSysMF(object):
 
     # def warmup(self, model_name: str='model', model_extension: str='csv'):
     def warmup(self, model_type: str = 'SVD'):
-
+        print('start warmup', self.options.model_data_path)
         if model_type == 'SVD':
             self.model = SvdModel()
+            print('created  class')
         else:
             raise Exception('Invalid model type!')
 
         if self.__is_model_exists(self.options.model_data_path):
+            print('loaded model')
             self.model.load_data(self.options)
         else:
             print('model dont exist')
@@ -62,9 +64,9 @@ class RecSysMF(object):
         self.users_matrix = self.__proceed_users(self.users_matrix)
         self.items_matrix = self.__proceed_items(self.items_matrix)
         # logger.info(f"Model: {self.options.model} successfully loaded: {datetime.now()}")
-        pass
 
     def train(self, train_data_path: str = None):
+        print('start train', self.options.train_data_path)
         self.warmup()
 
         if train_data_path == None:
@@ -154,6 +156,13 @@ class RecSysMF(object):
 
         return matrix, mean_user_rating, std_user_rating
 
+    def __normalize_row(self, row: pd.DataFrame):
+        mean_user_rating = np.nanmean(row.values, axis=1).reshape(-1, 1)
+        std_user_rating = np.nanstd(row.values, axis=1).reshape(-1, 1)
+        row_normalized_values = (row.values - mean_user_rating) / std_user_rating
+        row = pd.DataFrame(data=row_normalized_values, index=row.index, columns=row.columns).fillna(0)
+        return row, mean_user_rating, std_user_rating
+
     def __get_movies_ids(self, predictions: pd.DataFrame):
         ids = predictions.columns.values
         return [int(x) for x in ids]
@@ -166,8 +175,17 @@ class RecSysMF(object):
         if test_data_path == None:
             test_data_path = self.options.test_data_path
 
+        print('test_Data_path', self.options.test_data_path)
+
         self.ratings_test = self.__load_ratings(test_data_path)
+
+        print('self.ratings_test', self.ratings_test)
+
         test_dataset = self.__create_user_item_rating_dataframe(self.users_matrix, self.items_matrix, self.ratings_test)
+
+        print('self.calculate_rmse(test_dataset, self.model.data)')
+        print(self.model.data, test_dataset)
+
         rmse = self.calculate_rmse(test_dataset, self.model.data)
         # rmse2 = self.calc_rmse2(self.model.data)
 
@@ -180,11 +198,11 @@ class RecSysMF(object):
         predictions = []
         for index, row in dataset.iterrows():
             user_id = row['user_id'] - 1
-            movie_id = str(row['movie_id'])
+            movie_id = row['movie_id']
             rating = row['rating']
             if movie_id in preds.columns:
                 real_marks.append(rating)
-                predictions.append(preds[f'{movie_id}'][user_id])
+                predictions.append(preds[movie_id][user_id])
 
         return mean_squared_error(real_marks, predictions, squared=False)
 
@@ -279,11 +297,30 @@ class RecSysMF(object):
     def predict(self, items_ratings: list, M: int = 10):
         if len(items_ratings) != 2:
             raise Exception('Wrong input!')
-        new_user_row = self.__init_new_row(items_ratings)
+        print('here')
+        ratings = items_ratings[1]
+        items_ids = items_ratings[0]
+        print('here11')
+        if not isinstance(items_ids[0], int):
+            items_ids = [self.__find_item_by_name(x) for x in items_ids]
+        data = [items_ids, ratings]
+        print('here12')
+        new_user_row = self.__init_new_row(data)
+        print('new user row', new_user_row.shape)
+
+        normalized_row, mean_user_rating, std_user_rating = self.__normalize_row(new_user_row)
 
         # print(new_user_row)
 
-        most_similar_user_id = pd.DataFrame(data=cosine_similarity(new_user_row, self.model.data),
+        new_user_to_users_similarity = cosine_similarity(normalized_row, self.user_item_matrix).T
+
+        # u - степень похожести
+        #
+
+        print('here3')
+        # prob_values = self.model.data * new_user_to_users_similarity
+
+        most_similar_user_id = pd.DataFrame(data=cosine_similarity(normalized_row, self.model.data),
                                             columns=self.model.data.T.columns.values).idxmax(axis=1).max()
 
         # ранжируем по похожести
@@ -316,7 +353,17 @@ class RecSysMF(object):
         #     # if items_id in new_user_row.columns:
         #     new_user_row[f'{items_id}'] = rating
 
-        new_user_row = pd.DataFrame(data=[ratings], columns=self.model.data.columns)
+        values = np.empty((1, len(self.model.data.columns)))
+        values.fill(np.nan)
+
+        print('init row values', values.shape)
+        print('init row values', len(self.model.data.columns))
+
+        new_user_row = pd.DataFrame(data=values, columns=self.model.data.columns)
+        print(new_user_row.shape)
+        for (id, mark) in zip(items_ids, ratings):
+            new_user_row[id] = mark
+        print(new_user_row.shape)
         return new_user_row
 
     def __create_indexer_dict(self, items_ids: list):

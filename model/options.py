@@ -3,23 +3,23 @@ import os
 
 class RecSysOptions():
     def __init__(self):
+        self.core_directory = 'C:\\Users\\Acer\\Machine Learning\\кусыны ьа натворил хуйни'
+
         # model
         self.model_name = 'model'
         self.model_extention = 'csv'
-        self.model_store = './store'
-        self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
-
-        print(self.model_data_path)
+        self.model_store = None
+        self.model_data_path = None
 
         # warm-up data
-        self.train_data_folder = os.path.join(os.getcwd(), "../data/train/")
-        self.test_data_folder = os.path.join(os.getcwd(), "../data/test/")
-        self.items_data_path = os.path.join(self.train_data_folder, 'movies.dat')
-        self.users_data_path = os.path.join(self.train_data_folder, 'users.dat')
+        self.train_data_folder = None
+        self.test_data_folder = None
+        self.items_data_path = None
+        self.users_data_path = None
 
         # training data
-        self.train_data_path = os.path.join(self.train_data_folder, 'ratings_train.dat')
-        self.test_data_path = os.path.join(self.test_data_folder, 'ratings_test.dat')
+        self.train_data_path = None
+        self.test_data_path = None
 
         # training
         self.n_vectors = 30
@@ -34,11 +34,30 @@ class RecSysOptions():
         self.rating_scale = (1, 5)
         self.n_epochs = 20
 
+        self.init_data()
+
+        print('core_directory', self.core_directory)
+        print('current', os.getcwd())
+
 
     def renew_model_name_and_path(self, model_name: str):
         self.model_name = model_name
         self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
         return self.model_path
+
+    def init_data(self):
+        self.model_store = os.path.join(os.path.join(self.core_directory, 'model/store/'))
+        self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
+
+        # warm-up data
+        self.train_data_folder = os.path.join(os.path.join(self.core_directory, 'data/train/'))
+        self.test_data_folder = os.path.join(os.path.join(self.core_directory, 'data/test/'))
+        self.items_data_path = os.path.join(os.path.join(self.train_data_folder, 'movies.dat'))
+        self.users_data_path = os.path.join(os.path.join(self.train_data_folder, 'users.dat'))
+
+        # training data
+        self.train_data_path = os.path.join(os.path.join(self.train_data_folder, 'ratings_train.dat'))
+        self.test_data_path = os.path.join(os.path.join(self.test_data_folder, 'ratings_test.dat'))
 
 
 

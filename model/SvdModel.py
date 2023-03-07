@@ -15,12 +15,14 @@ class SvdModel(BaseModel):
         self.data = None
 
     def load_data(self, options: RecSysOptions):
+        print('load_Daat', options.model_data_path)
         model_path_split = os.path.splitext(options.model_data_path)
         options.model_name = model_path_split[0]
         options.model_extention = model_path_split[1][1:]
 
         if options.model_extention == 'csv':
             self.data = pd.read_csv(options.model_data_path,encoding=options.encoding)
+            self.data.columns = [int(x) for x in self.data.columns]
         else:
             raise Exception("Wrong model extension")
         return
