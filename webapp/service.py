@@ -19,10 +19,7 @@ class Service():
         self.model.evaluate()
 
     def predict(self, item_ratings: list, M: int=5):
-        print(item_ratings)
-        print(self.model)
         output = self.model.predict(item_ratings, M)
-        print(output)
         return output
 
     def reload(self):

@@ -57,8 +57,6 @@ def predict():
             return make_response(jsonify({'message': 'Invalid JSON data'}), 400)
 
         try:
-            print('cintr pred', service.model)
-            print([movie_names, ratings], m)
             result = service.predict([movie_names, ratings], m)
             return make_response(jsonify(result), 200)
         except Exception as e:

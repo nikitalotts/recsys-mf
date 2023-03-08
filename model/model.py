@@ -297,31 +297,84 @@ class RecSysMF(object):
     def predict(self, items_ratings: list, M: int = 10):
         if len(items_ratings) != 2:
             raise Exception('Wrong input!')
-        print('here')
+        # print('here')
         ratings = items_ratings[1]
         items_ids = items_ratings[0]
-        print('here11')
+        # print('here11')
         if not isinstance(items_ids[0], int):
             items_ids = [self.__find_item_by_name(x) for x in items_ids]
         data = [items_ids, ratings]
-        print('here12')
+        # print('here12')
         new_user_row = self.__init_new_row(data)
-        print('new user row', new_user_row.shape)
+        # print('new user row', new_user_row.shape)
 
         normalized_row, mean_user_rating, std_user_rating = self.__normalize_row(new_user_row)
 
         # print(new_user_row)
 
-        new_user_to_users_similarity = cosine_similarity(normalized_row, self.user_item_matrix).T
+        weights = cosine_similarity(normalized_row.values * 1000, self.user_item_matrix * 1000).T
 
-        # u - степень похожести
+        # gt0 = (weights > 0).sum()
+
+        # print('gt00', gt0)
+
+        weights = np.broadcast_arrays(weights, self.user_item_matrix)[0]
+
+
+        output = np.average(self.user_item_matrix, axis=0, weights=weights)
+
+        # print('just average', output)
+
+        marks = (output * std_user_rating + mean_user_rating)[0]
+
+        # print('marks', marks, marks.shape)
         #
+        # print('output shape', output.shape)
+        #
+        # print('data shape norm', self.model.data)
+        # print('data shape T', self.model.data.T)
 
-        print('here3')
-        # prob_values = self.model.data * new_user_to_users_similarity
+        # print('output shape', marks.shape)
+        #
+        # if 1 not in marks.shape:
+        #     print('EROEROEROEEO')
 
-        most_similar_user_id = pd.DataFrame(data=cosine_similarity(normalized_row, self.model.data),
-                                            columns=self.model.data.T.columns.values).idxmax(axis=1).max()
+
+        # для всех можно
+        best_movies_ids = np.argsort(-marks.reshape(1, -1), axis=1)[:, :M]
+
+        # print('best movies', best_movies_ids, type(best_movies_ids))
+
+        best_movies_cols_ids = self.model.data.columns.values[best_movies_ids][0]
+
+        # print('best_movies_cols_ids', best_movies_cols_ids, type(best_movies_cols_ids), best_movies_cols_ids[0])
+        # print(best_movies_ids.shape)
+
+        films = self.__find_items_by_ids(best_movies_cols_ids)
+
+        # print('films', films)
+
+        films.sort_values('movie_id', ascending=False)['title'].values.tolist()
+
+        movies_names = self.__sort_items_by_ids(films, best_movies_cols_ids)
+
+        # print('asd', movies_names)
+
+        marks.sort()
+
+        # print('marks', marks)
+
+        best_movies_marks = marks[::-1][:M]
+
+        # print('best_movies_marks', best_movies_marks)
+        #
+        # print('result', movies_names, best_movies_marks)
+
+        best_movies_marks[best_movies_marks > 5] = 5
+        best_movies_marks[best_movies_marks < 0] = 0
+
+        # most_similar_user_id = pd.DataFrame(data=cosine_similarity(normalized_row, self.model.data),
+        #                                     columns=self.model.data.T.columns.values).idxmax(axis=1).max()
 
         # ранжируем по похожести
         # оцеку * на похожесть
@@ -334,12 +387,14 @@ class RecSysMF(object):
         # numpy
         # labelencoder
 
-        items_ids = [int(x) for x in
-                     self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].index.values.tolist()]
-        items_ratings = self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].values.tolist()
-        items_names = self.__find_items_by_ids(items_ids).title.values.tolist()
+        # items_ids = [int(x) for x in
+        #              self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].index.values.tolist()]
+        # items_ratings = self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].values.tolist()
+        # items_names = self.__find_items_by_ids(items_ids).title.values.tolist()
 
-        return [items_names, items_ratings]
+        return [movies_names, best_movies_marks.tolist()]
+
+
 
     def __find_items_by_ids(self, ids: list):
         return self.items_matrix.loc[self.items_matrix['movie_id'].isin(ids), :]
@@ -356,14 +411,9 @@ class RecSysMF(object):
         values = np.empty((1, len(self.model.data.columns)))
         values.fill(np.nan)
 
-        print('init row values', values.shape)
-        print('init row values', len(self.model.data.columns))
-
         new_user_row = pd.DataFrame(data=values, columns=self.model.data.columns)
-        print(new_user_row.shape)
         for (id, mark) in zip(items_ids, ratings):
             new_user_row[id] = mark
-        print(new_user_row.shape)
         return new_user_row
 
     def __create_indexer_dict(self, items_ids: list):
