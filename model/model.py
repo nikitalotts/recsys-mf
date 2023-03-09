@@ -21,6 +21,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import regex as re
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -52,17 +53,17 @@ class RecSysMF(object):
         else:
             raise Exception('Invalid model type!')
 
-        if self.__is_model_exists(self.options.model_data_path):
+        if self.is_model_exists(self.options.model_data_path):
             print('loaded model')
             self.model.load_data(self.options)
         else:
             print('model dont exist')
 
-        self.users_matrix, self.n_users = self.__load_users_data(self.options.users_data_path)
-        self.items_matrix, self.n_items = self.__load_items_data(self.options.items_data_path)
+        self.users_matrix, self.n_users = self.load_users_data(self.options.users_data_path)
+        self.items_matrix, self.n_items = self.load_items_data(self.options.items_data_path)
 
-        self.users_matrix = self.__proceed_users(self.users_matrix)
-        self.items_matrix = self.__proceed_items(self.items_matrix)
+        self.users_matrix = self.proceed_users(self.users_matrix)
+        self.items_matrix = self.proceed_items(self.items_matrix)
         # logger.info(f"Model: {self.options.model} successfully loaded: {datetime.now()}")
 
     def train(self, train_data_path: str = None):
@@ -72,10 +73,10 @@ class RecSysMF(object):
         if train_data_path == None:
             train_data_path = self.options.train_data_path
 
-        self.ratings_train = self.__load_ratings(train_data_path)
-        self.user_item_matrix = self.__create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_train)
+        self.ratings_train = self.load_ratings(train_data_path)
+        self.user_item_matrix = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_train)
 
-        self.user_item_matrix, self.mean_user_rating, self.std_user_rating = self.__normalize_matrix(
+        self.user_item_matrix, self.mean_user_rating, self.std_user_rating = self.normalize_matrix(
             self.user_item_matrix)
         self.model.fit(self.user_item_matrix, self.options.n_vectors, self.mean_user_rating,
                        self.std_user_rating)  # , self.std_user_rating)
@@ -84,22 +85,22 @@ class RecSysMF(object):
         print('fitted')
         return
 
-    def __is_model_exists(self, model_data_path: str):
+    def is_model_exists(self, model_data_path: str):
         """
         все модели сохраняются в моделс сторе
         """
         return os.path.exists(model_data_path)
 
-    def __create_user_item_matrix(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
-        user_item_rating_dataframe = self.__create_user_item_rating_dataframe(users, items, ratings)
+    def create_user_item_matrix(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
+        user_item_rating_dataframe = self.create_user_item_rating_dataframe(users, items, ratings)
         matrix = user_item_rating_dataframe.pivot(index='user_id', columns='movie_id', values='rating')
         return matrix
 
-    def __create_user_item_rating_dataframe(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
+    def create_user_item_rating_dataframe(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
         dataframe = pd.merge(ratings, items, on='movie_id', how='left').merge(users, on='user_id', how='left')
         return dataframe
 
-    def __load_model_data(self, model_path: str):
+    def load_model_data(self, model_path: str):
         model_path_split = os.path.splitext(model_path)
         self.options.model_name = model_path_split[0]
         self.options.model_extention = model_path_split[1][1:]
@@ -110,7 +111,7 @@ class RecSysMF(object):
             raise Exception("Wrong model extension")
         return
 
-    def __load_users_data(self, users_data: str):
+    def load_users_data(self, users_data: str):
         users = pd.read_csv(users_data, names=['user_id', 'gender', 'age', 'occupation', 'zip-code'],
                             sep=self.options.data_loading_sep, engine=self.options.data_loading_engine,
                             encoding=self.options.encoding)
@@ -119,7 +120,7 @@ class RecSysMF(object):
         return users, n_users
 
     # вынести
-    def __load_items_data(self, items_data: str):
+    def load_items_data(self, items_data: str):
         items = pd.read_csv(items_data, names=['movie_id', 'title', 'genres'],
                             sep=self.options.data_loading_sep, engine=self.options.data_loading_engine,
                             encoding=self.options.encoding)
@@ -127,8 +128,8 @@ class RecSysMF(object):
 
         return items, n_items
 
-    # def __load_ratings(self, ratings_data_path: str, is_train: bool=True):
-    def __load_ratings(self, ratings_data_path: str):
+    # def load_ratings(self, ratings_data_path: str, is_train: bool=True):
+    def load_ratings(self, ratings_data_path: str):
         ratings = pd.read_csv(ratings_data_path, names=['user_id', 'movie_id', 'rating', 'date'],
                               sep=self.options.data_loading_sep, engine=self.options.data_loading_engine,
                               encoding=self.options.encoding)
@@ -138,14 +139,14 @@ class RecSysMF(object):
         #     self.ratings_test = ratings
         return ratings
 
-    def __proceed_items(self, items_matrix: pd.DataFrame):
+    def proceed_items(self, items_matrix: pd.DataFrame):
         items_matrix['release_year'] = items_matrix['title'].str.extract(r'(?:\((\d{4})\))?\s*$', expand=False)
         return items_matrix
 
-    def __proceed_users(self, users_matrix: pd.DataFrame):
+    def proceed_users(self, users_matrix: pd.DataFrame):
         return users_matrix
 
-    def __normalize_matrix(self, matrix: pd.DataFrame):
+    def normalize_matrix(self, matrix: pd.DataFrame):
         # mean_user_rating = np.mean(matrix.values, axis=1).reshape(-1, 1)
         mean_user_rating = np.nanmean(matrix.values, axis=1).reshape(-1, 1)
         std_user_rating = np.nanstd(matrix.values, axis=1).reshape(-1, 1)
@@ -153,17 +154,19 @@ class RecSysMF(object):
         # matrix_normalized_values = (matrix.values - mean_user_rating) / mean_user_rating
         matrix_normalized_values = (matrix.values - mean_user_rating) / std_user_rating
         matrix = pd.DataFrame(data=matrix_normalized_values, index=matrix.index, columns=matrix.columns).fillna(0)
+        mean_user_rating[np.isnan(mean_user_rating)] = 0
+        std_user_rating[np.isnan(std_user_rating)] = 0
 
         return matrix, mean_user_rating, std_user_rating
 
-    def __normalize_row(self, row: pd.DataFrame):
+    def normalize_row(self, row: pd.DataFrame):
         mean_user_rating = np.nanmean(row.values, axis=1).reshape(-1, 1)
         std_user_rating = np.nanstd(row.values, axis=1).reshape(-1, 1)
         row_normalized_values = (row.values - mean_user_rating) / std_user_rating
         row = pd.DataFrame(data=row_normalized_values, index=row.index, columns=row.columns).fillna(0)
         return row, mean_user_rating, std_user_rating
 
-    def __get_movies_ids(self, predictions: pd.DataFrame):
+    def get_movies_ids(self, predictions: pd.DataFrame):
         ids = predictions.columns.values
         return [int(x) for x in ids]
 
@@ -175,15 +178,15 @@ class RecSysMF(object):
         if test_data_path == None:
             test_data_path = self.options.test_data_path
 
-        print('test_Data_path', self.options.test_data_path)
+        # print('test_Data_path', self.options.test_data_path)
 
-        self.ratings_test = self.__load_ratings(test_data_path)
+        self.ratings_test = self.load_ratings(test_data_path)
 
-        print('self.ratings_test', self.ratings_test)
+        # print('self.ratings_test', self.ratings_test)
 
-        test_dataset = self.__create_user_item_rating_dataframe(self.users_matrix, self.items_matrix, self.ratings_test)
+        test_dataset = self.create_user_item_rating_dataframe(self.users_matrix, self.items_matrix, self.ratings_test)
 
-        print('self.calculate_rmse(test_dataset, self.model.data)')
+        # print('self.calculate_rmse(test_dataset, self.model.data)')
         print(self.model.data, test_dataset)
 
         rmse = self.calculate_rmse(test_dataset, self.model.data)
@@ -200,14 +203,14 @@ class RecSysMF(object):
             user_id = row['user_id'] - 1
             movie_id = row['movie_id']
             rating = row['rating']
-            if movie_id in preds.columns:
-                real_marks.append(rating)
-                predictions.append(preds[movie_id][user_id])
+            # if movie_id in preds.columns:
+            real_marks.append(rating)
+            predictions.append(preds[movie_id][user_id])
 
         return mean_squared_error(real_marks, predictions, squared=False)
 
     def calc_rmse2(self, preds):
-        test_dataset = self.__create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
+        test_dataset = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
         print(test_dataset)
         rmse = np.nanmean((test_dataset.values - preds.values) ** 2)
         print('rmse2', rmse)
@@ -218,22 +221,22 @@ class RecSysMF(object):
         if train_data_path == None:
             train_data_path = self.options.train_data_path
 
-        self.ratings_train = self.__load_ratings(train_data_path)
+        self.ratings_train = self.load_ratings(train_data_path)
 
-        dataset = self.__surprise_get_dataset(self.ratings_train)
-        self.__surprise_fit_model(dataset)
+        dataset = self.surprise_get_dataset(self.ratings_train)
+        self.surprise_fit_model(dataset)
         self.trained = True
         print('trained')
         return
 
-    def __surprise_get_dataset(self, ratings: pd.DataFrame):
+    def surprise_get_dataset(self, ratings: pd.DataFrame):
         return Dataset.load_from_df(ratings[['user_id', 'movie_id', 'rating']], reader=Reader(rating_scale=(1, 5)))
 
-    def __surprise_fit_model(self, dataset: surprise.Dataset):
+    def surprise_fit_model(self, dataset: surprise.Dataset):
         self.model = SVD(n_factors=50)
         self.model.fit(dataset.build_full_trainset())
 
-    def __surprise_make_predictions(self, dataset: surprise.Dataset):
+    def surprise_make_predictions(self, dataset: surprise.Dataset):
         real_marks = []
         predictions = []
         for row in dataset.build_full_trainset().build_testset():
@@ -242,7 +245,7 @@ class RecSysMF(object):
 
         return np.array(real_marks), np.array(predictions)
 
-    def __surprise_calculate_rmse(self, real: np.matrix, pred: np.matrix):
+    def surprise_calculate_rmse(self, real: np.matrix, pred: np.matrix):
         return mean_squared_error(real, pred, squared=False)
 
     def surprise_evaluate(self, test_data_path: str = None):
@@ -252,25 +255,25 @@ class RecSysMF(object):
         if test_data_path == None:
             test_data_path = self.options.test_data_path
 
-        self.ratings_test = self.__load_ratings(test_data_path)
+        self.ratings_test = self.load_ratings(test_data_path)
 
-        dataset = self.__surprise_get_dataset(self.ratings_test)
+        dataset = self.surprise_get_dataset(self.ratings_test)
 
-        real_marks, predictions = self.__surprise_make_predictions(dataset)
+        real_marks, predictions = self.surprise_make_predictions(dataset)
 
-        rmse = self.__surprise_calculate_rmse(real_marks, predictions)
+        rmse = self.surprise_calculate_rmse(real_marks, predictions)
 
         return rmse
 
     # query handlers
 
-    def __find_item_by_name(self, received_name: str):
+    def find_item_by_name(self, received_name: str):
         item_index = self.items_matrix['title'].apply(
             lambda title: levenshtein(re.sub(r' \([0-9]{4}\)', '', title.lower()), received_name.lower())).idxmin()
         item_id = self.items_matrix.loc[item_index]['movie_id']
         return item_id
 
-    def __calculate_items_similarity_matrix(self, items_matrix: pd.DataFrame):
+    def calculate_items_similarity_matrix(self, items_matrix: pd.DataFrame):
         # t тк вектор - фильм
         similarity_matrix = cosine_similarity(items_matrix, items_matrix)
         # нуля чтоб сам себя не рекоммендовал
@@ -278,20 +281,20 @@ class RecSysMF(object):
         similarity_df = pd.DataFrame(similarity_matrix, self.model.data.columns, self.model.data.columns)
         return similarity_df
 
-    def __find_similar(self, movie_id: int, n: int = 5):
+    def find_similar(self, movie_id: int, n: int = 5):
         items_idxs = np.array(self.items_similarity_matrix[movie_id].sort_values(ascending=False)[:n].index.values,
                               dtype=int).tolist()
 
-        items = self.__sort_items_by_ids(self.items_matrix, items_idxs)
+        items = self.sort_items_by_ids(self.items_matrix, items_idxs)
 
         items_idxs = [int(x) for x in items_idxs]
         return items_idxs, items
 
     def get_similar_items(self, received_name: str = 'Bambi (1942)', amount: int = 5):
-        item_id = self.__find_item_by_name(received_name)
+        item_id = self.find_item_by_name(received_name)
         if self.items_similarity_matrix is None:
-            self.items_similarity_matrix = self.__calculate_items_similarity_matrix(self.model.data.T)
-        items_idxs, items = self.__find_similar(item_id, amount)
+            self.items_similarity_matrix = self.calculate_items_similarity_matrix(self.model.data.T)
+        items_idxs, items = self.find_similar(item_id, amount)
         return [items_idxs, items]
 
     def predict(self, items_ratings: list, M: int = 10):
@@ -302,13 +305,13 @@ class RecSysMF(object):
         items_ids = items_ratings[0]
         # print('here11')
         if not isinstance(items_ids[0], int):
-            items_ids = [self.__find_item_by_name(x) for x in items_ids]
+            items_ids = [self.find_item_by_name(x) for x in items_ids]
         data = [items_ids, ratings]
         # print('here12')
-        new_user_row = self.__init_new_row(data)
+        new_user_row = self.init_new_row(data)
         # print('new user row', new_user_row.shape)
 
-        normalized_row, mean_user_rating, std_user_rating = self.__normalize_row(new_user_row)
+        normalized_row, mean_user_rating, std_user_rating = self.normalize_row(new_user_row)
 
         # print(new_user_row)
 
@@ -319,7 +322,6 @@ class RecSysMF(object):
         # print('gt00', gt0)
 
         weights = np.broadcast_arrays(weights, self.user_item_matrix)[0]
-
 
         output = np.average(self.user_item_matrix, axis=0, weights=weights)
 
@@ -339,7 +341,6 @@ class RecSysMF(object):
         # if 1 not in marks.shape:
         #     print('EROEROEROEEO')
 
-
         # для всех можно
         best_movies_ids = np.argsort(-marks.reshape(1, -1), axis=1)[:, :M]
 
@@ -350,13 +351,13 @@ class RecSysMF(object):
         # print('best_movies_cols_ids', best_movies_cols_ids, type(best_movies_cols_ids), best_movies_cols_ids[0])
         # print(best_movies_ids.shape)
 
-        films = self.__find_items_by_ids(best_movies_cols_ids)
+        films = self.find_items_by_ids(best_movies_cols_ids)
 
         # print('films', films)
 
         films.sort_values('movie_id', ascending=False)['title'].values.tolist()
 
-        movies_names = self.__sort_items_by_ids(films, best_movies_cols_ids)
+        movies_names = self.sort_items_by_ids(films, best_movies_cols_ids)
 
         # print('asd', movies_names)
 
@@ -390,16 +391,119 @@ class RecSysMF(object):
         # items_ids = [int(x) for x in
         #              self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].index.values.tolist()]
         # items_ratings = self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].values.tolist()
-        # items_names = self.__find_items_by_ids(items_ids).title.values.tolist()
+        # items_names = self.find_items_by_ids(items_ids).title.values.tolist()
 
         return [movies_names, best_movies_marks.tolist()]
 
+    def predict_dataset(self, dataset_path: str, m: int = 5):
+        if dataset_path is None:
+            dataset_path = self.options.test_data_path
+
+        self.ratings_test = self.load_ratings(self.options.test_data_path)
+        test_matrix = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
+
+        test_matrix = self.fill_missed_values(test_matrix)
+
+        top_items_names, top_items_ratings = self.find_top_items_for_users(test_matrix)
+
+        result = self.generate_dataframe(top_items_names, top_items_ratings, m)
+
+        name = f'prediction_for_top_{m}_movies'
+        result.to_csv(name)
+        return str(os.getcwd() + name)
+
+    def generate_dataframe(self, items_names: list, items_ratings: list, m: int = 5):
+        columns = self.generate_new_columns(m)
+
+        data = []
+        for name, mark in zip(items_names, items_ratings):
+            row_data = []
+            for i in range(m):
+                row_data.append(name[i])
+                row_data.append(mark[i])
+            data.append(row_data)
+
+        res_df = pd.DataFrame(data=data, columns=columns)
+        res_df.index = res_df.index + 1
+        return res_df
+
+    def find_top_items_for_users(self, test_matrix: pd.DataFrame, m: int = 5):
+        normalized_matrix, mean_user_rating, std_user_rating = self.normalize_matrix(test_matrix)
+
+        user_to_user_similarity = cosine_similarity(normalized_matrix.values, self.user_item_matrix).T
+
+        top_items_names = []
+        top_items_ratings = []
+
+        for (asd, user_data) in enumerate(zip(user_to_user_similarity, std_user_rating, mean_user_rating)):
+
+            if asd % 100 == 0 and asd > 0:
+                print(f'epoch {asd}')
+
+            output = np.average(self.user_item_matrix, axis=0,
+                                weights=np.broadcast_arrays(user_data[0].reshape(-1, 1), self.user_item_matrix)[0])
+            output = output * user_data[1] + user_data[2]
+
+            best_movies_ids = np.argsort(-output.reshape(1, -1), axis=1)[:, :m]
+            best_movies_cols_ids = self.model.data.columns.values[best_movies_ids][0]
+
+            items = self.find_items_by_ids(best_movies_cols_ids)
+            items.sort_values('movie_id', ascending=False)['title'].values.tolist()
+            movies_names = self.sort_items_by_ids(items, best_movies_cols_ids)
+
+            best_movies_marks = np.sort(output)[::-1][:m]
+            best_movies_marks[best_movies_marks > 5] = 5
+            best_movies_marks[best_movies_marks < 0] = 0
+
+            top_items_names.append(movies_names)
+            top_items_ratings.append(best_movies_marks)
+
+        return top_items_names, top_items_ratings
 
 
-    def __find_items_by_ids(self, ids: list):
+    def generate_new_columns(self, m):
+        cols = []
+        for i in range(1, m + 1):
+            cols.append(f'movie_name_{i}')
+            cols.append(f'mark_{i}')
+
+        return cols
+
+    def fill_missed_values(self, test_matrix: pd.DataFrame):
+        # movies
+        train_columns = self.model.data.columns.values
+        train_index = self.model.data.index.values
+
+        # users
+        test_columns = test_matrix.columns.values
+        test_index = test_matrix.index.values - 1
+
+        movies_lack_in_test = set(train_columns) - set(test_columns)
+        users_lack_in_test = set(train_index) - set(test_index)
+
+        new_columns = np.append(test_columns, list(movies_lack_in_test))
+        new_index = np.append(test_index, list(users_lack_in_test))
+
+        new_data = np.empty((len(users_lack_in_test), test_matrix.shape[1]))
+        new_data[:] = np.nan
+
+        matrix_filled_users = np.vstack([test_matrix.values, new_data])
+
+        new_data = np.empty((matrix_filled_users.shape[0], len(movies_lack_in_test)))
+        new_data[:] = np.nan
+
+        new_data = np.hstack([matrix_filled_users, new_data])
+
+        filled_matrix = pd.DataFrame(data=new_data, columns=new_columns, index=new_index)
+        filled_matrix = filled_matrix.sort_index()
+        filled_matrix = filled_matrix.reindex(sorted(filled_matrix.columns), axis=1)
+
+        return filled_matrix
+
+    def find_items_by_ids(self, ids: list):
         return self.items_matrix.loc[self.items_matrix['movie_id'].isin(ids), :]
 
-    def __init_new_row(self, items_ratings: list):
+    def init_new_row(self, items_ratings: list):
 
         items_ids = items_ratings[0]
         ratings = items_ratings[1]
@@ -416,14 +520,14 @@ class RecSysMF(object):
             new_user_row[id] = mark
         return new_user_row
 
-    def __create_indexer_dict(self, items_ids: list):
+    def create_indexer_dict(self, items_ids: list):
         indexer = {}
         for i, val in enumerate(items_ids):
             indexer[val] = i
         return indexer
 
-    def __sort_items_by_ids(self, items: pd.DataFrame, items_ids: list):
-        indexer = self.__create_indexer_dict(items_ids)
+    def sort_items_by_ids(self, items: pd.DataFrame, items_ids: list):
+        indexer = self.create_indexer_dict(items_ids)
         items = items.loc[items['movie_id'].isin(items_ids), :]
         items.loc[:, ['order']] = items['movie_id'].map(indexer)
         names = items.sort_values('order')['title'].values.tolist()
@@ -447,13 +551,10 @@ class CliWrapper(object):
         rmse = self.recsys.evaluate(dataset)
         print(rmse)
 
-    def predict(self, dataset: str = None):
+    def predict(self, dataset: str = None, amount: int = 5):
         self.recsys.train()
-        user_id = 50
-        data = [[int(x) for x in self.recsys.model.data.T[user_id].index.values.tolist()],
-                self.recsys.model.data.T[user_id].tolist()]
-        output = self.recsys.predict(data)
-        print(output)
+        output = self.recsys.predict_dataset(dataset, amount)
+        print(output, 'predicted')
 
     def surprise_train(self, dataset: str = None):
         self.recsys.surprise_train(dataset)
@@ -466,4 +567,3 @@ class CliWrapper(object):
 
 if __name__ == "__main__":
     fire.Fire(CliWrapper)
-

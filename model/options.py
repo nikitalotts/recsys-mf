@@ -36,8 +36,8 @@ class RecSysOptions():
 
         self.init_data()
 
-        print('core_directory', self.core_directory)
-        print('current', os.getcwd())
+        # print('core_directory', self.core_directory)
+        # print('current', os.getcwd())
 
 
     def renew_model_name_and_path(self, model_name: str):
