@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import os
-
+import logging
 import numpy as np
 from flask import Flask, request, jsonify, make_response
 from threading import Lock
 
-# from main import predict, reload
 import json
 
 from pydotplus import basestring
@@ -15,11 +14,14 @@ from webapp.service import Service
 LOCK = Lock()
 app = Flask(__name__)
 service = Service()
+logger = logging.getLogger(__name__)
+
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
+    logger.info('reached /api/predict/ endpoint')
     if LOCK.locked():
-        return make_response(jsonify({'error': 'Server is busy!'}), 403)
+        return make_response(jsonify({'error': 'Server is busy'}), 403)
 
     with LOCK:
         request_data = request.get_json()
@@ -50,22 +52,21 @@ def predict():
 
             if not is_list_of_ints(ratings):
                 return make_response(jsonify({'message': 'Movies names list consist not only of ints'}), 400)
-
-        except KeyError:
+        except KeyError as e:
+            logger.error(e)
             return make_response(jsonify({'message': 'No \'movie_names_ratings\' key in JSON data'}), 400)
-        except json.decoder.JSONDecodeError:
+        except json.decoder.JSONDecodeError as e:
+            logger.error(e)
             return make_response(jsonify({'message': 'Invalid JSON data'}), 400)
 
         try:
             result = service.predict([movie_names, ratings], m)
+            logger.info('result successfully predicted')
             return make_response(jsonify(result), 200)
         except Exception as e:
-            print(e)
+            logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
-
-
-#
 
 @app.route('/api/log', methods=['GET'])
 def log():
@@ -73,50 +74,55 @@ def log():
     # with open("app.log", "r") as log_f:
     #     logs_tail = log_f.readlines()[-20:]
 
-    print(service.hello('hello hui'))
+    logger.info('reached /api/log/ endpoint')
 
     if LOCK.locked():
-        return make_response(jsonify({'error': 'Processing in progress!'}), 403)
-
+        return make_response(jsonify({'error': 'Server is busy'}), 403)
     with LOCK:
         try:
-            # run service func
-            return make_response(jsonify({'Last 20s app.log rows': 'qwdqwd'}))
-        except:
+            output = service.log()
+            logger.info('logs successfully received')
+            return make_response(jsonify({'last 20 rows of logs': output}))
+        except Exception as e:
+            logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
 @app.route('/api/info', methods=['GET'])
 def info():
+    logger.info('reached /api/info/ endpoint')
     if LOCK.locked():
-        return make_response(jsonify({'error': 'Processing in progress!'}), 403)
-
+        return make_response(jsonify({'error': 'Server is busy'}), 403)
     with LOCK:
         try:
             # run service func
-            return make_response(jsonify({'message': "Will be here soon :-)"}))
-        except:
+            logger.info('docker info successfully recieved')
+            return make_response(jsonify({'message': "Will be info"}))
+        except Exception as e:
+            logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
 @app.route('/api/reload', methods=['POST'])
 def reload():
+    logger.info('reached /api/reload/ endpoint')
     if LOCK.locked():
-        return make_response(jsonify({'error': 'Processing in progress!'}), 403)
-
+        return make_response(jsonify({'error': 'server is busy'}), 403)
     with LOCK:
         try:
             service.reload()
-            return make_response(jsonify({'Result': "Model successfully reloaded!"}))
-        except:
+            logger.info('model successfully reloaded')
+            return make_response(jsonify({'Result': "model successfully reloaded"}))
+        except Exception as e:
+            logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
 @app.route('/api/similar', methods=['POST'])
 def similar():
+    logger.info('reached /api/similar/ endpoint')
     if LOCK.locked():
-        return make_response(jsonify({'error': 'Processing in progress!'}), 403)
-
+        return make_response(jsonify({'error': 'Server is busy'}), 403)
     with LOCK:
         request_data = request.get_json()
         if request_data is None:
@@ -124,47 +130,25 @@ def similar():
         try:
             n = 5
             movie_name = request_data['movie_name']
-
             if 'N' in request_data:
                 n = request_data['N']
                 if not isinstance(n, int) or (isinstance(n, int) and n > 50):
                     n = 5
-
             if not isinstance(movie_name, str) or movie_name == '':
                 return make_response(jsonify({'message': 'Wrong \'movie_name\' value'}), 400)
-
-        except KeyError:
+        except KeyError as e:
+            logger.error(e)
             return make_response(jsonify({'message': 'No \'movie_name\' key in JSON data'}), 400)
-        except json.decoder.JSONDecodeError:
+        except json.decoder.JSONDecodeError as e:
+            logger.error(e)
             return make_response(jsonify({'message': 'Invalid JSON data'}), 400)
-
         try:
-            output = service.similair(movie_name, n)
+            output = service.similar(movie_name, n)
+            logger.info('successfully recieved similair results')
             return make_response(jsonify(output), 200)
-        except:
+        except Exception as e:
+            logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
-
-@app.route('/api/test/', methods=['GET'])
-def test():
-    print(request.args.getlist('movies_ratings'))
-
-
-# @app.route('/api/old_predict', methods=['GET'])
-# def process():
-#     user_id = request.args.get('user_id', default=100, type=int)
-#     M_items_recommend = request.args.get('M', default=20, type=int)
-#
-#     if LOCK.locked():
-#         return make_response(jsonify({'error': 'Processing in progress!'}), 403)
-#
-#     with LOCK:
-#         try:
-#             movies, ratings = ['#movies'], ['ratings']
-#         except Exception as e:
-#             print(e)
-#             return make_response(jsonify({'error': f'{e}'}), 500)
-#         else:
-#             return make_response(jsonify({'result': f"Movies: {movies}  With Ratings: {ratings}"}))
 
 
 def is_list_of_strings(lst):

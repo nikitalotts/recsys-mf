@@ -42,22 +42,20 @@ class RecSysMF(object):
         self.surprise_matrix = None
         self.items_similarity_matrix = None
         # self.creation_date = str(datetime.now())
-        pass
+        logging.info('RecSysMF instance successfully inited')
 
     # def warmup(self, model_name: str='model', model_extension: str='csv'):
     def warmup(self, model_type: str = 'SVD'):
-        print('start warmup', self.options.model_data_path)
+        logging.info(f'started warmup method, model_type:{model_type}, model_data_path:{self.options.model_data_path}')
         if model_type == 'SVD':
             self.model = SvdModel()
-            print('created  class')
         else:
-            raise Exception('Invalid model type!')
+            logger.error(f'Invalid model type: {model_type}')
 
         if self.is_model_exists(self.options.model_data_path):
-            print('loaded model')
             self.model.load_data(self.options)
         else:
-            print('model dont exist')
+            logger.warning(f'model doesn\'t exist: {self.options.model_data_path}')
 
         self.users_matrix, self.n_users = self.load_users_data(self.options.users_data_path)
         self.items_matrix, self.n_items = self.load_items_data(self.options.items_data_path)
@@ -67,11 +65,12 @@ class RecSysMF(object):
         # logger.info(f"Model: {self.options.model} successfully loaded: {datetime.now()}")
 
     def train(self, train_data_path: str = None):
-        print('start train', self.options.train_data_path)
+        logger.info(f'started train method, {train_data_path}')
         self.warmup()
 
-        if train_data_path == None:
+        if train_data_path is None:
             train_data_path = self.options.train_data_path
+            logger.info(f'given train_data_path is none, train_data_path changed to options.train_data_path: {self.options.train_data_path}')
 
         self.ratings_train = self.load_ratings(train_data_path)
         self.user_item_matrix = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_train)
@@ -82,7 +81,7 @@ class RecSysMF(object):
                        self.std_user_rating)  # , self.std_user_rating)
         self.model.save(self.options.model_name, self.options)
         self.trained = True
-        print('fitted')
+        print('trained')
         return
 
     def is_model_exists(self, model_data_path: str):
@@ -92,12 +91,16 @@ class RecSysMF(object):
         return os.path.exists(model_data_path)
 
     def create_user_item_matrix(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
+        logger.info(f'started create_user_item_matrix method')
         user_item_rating_dataframe = self.create_user_item_rating_dataframe(users, items, ratings)
         matrix = user_item_rating_dataframe.pivot(index='user_id', columns='movie_id', values='rating')
+        logger.info(f'create_user_item_matrix method successfully executed')
         return matrix
 
     def create_user_item_rating_dataframe(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
+        logger.info('started create_user_item_rating_dataframe method')
         dataframe = pd.merge(ratings, items, on='movie_id', how='left').merge(users, on='user_id', how='left')
+        logger.info(f'create_user_item_rating_dataframe method successfully executed')
         return dataframe
 
     def load_model_data(self, model_path: str):
@@ -112,11 +115,13 @@ class RecSysMF(object):
         return
 
     def load_users_data(self, users_data: str):
+        logger.info('started load_users_data method')
         users = pd.read_csv(users_data, names=['user_id', 'gender', 'age', 'occupation', 'zip-code'],
                             sep=self.options.data_loading_sep, engine=self.options.data_loading_engine,
                             encoding=self.options.encoding)
         n_users = users['user_id'].nunique()
 
+        logger.info('load_users_data method successfully executed')
         return users, n_users
 
     # вынести
@@ -130,6 +135,7 @@ class RecSysMF(object):
 
     # def load_ratings(self, ratings_data_path: str, is_train: bool=True):
     def load_ratings(self, ratings_data_path: str):
+        logger.info(f'started load_ratings method, {ratings_data_path}')
         ratings = pd.read_csv(ratings_data_path, names=['user_id', 'movie_id', 'rating', 'date'],
                               sep=self.options.data_loading_sep, engine=self.options.data_loading_engine,
                               encoding=self.options.encoding)
@@ -137,16 +143,22 @@ class RecSysMF(object):
         #     self.ratings_train = ratings
         # else:
         #     self.ratings_test = ratings
+        logger.info(f'load_ratings method successfully inited')
         return ratings
 
     def proceed_items(self, items_matrix: pd.DataFrame):
+        logger.info('started proceed_items method')
         items_matrix['release_year'] = items_matrix['title'].str.extract(r'(?:\((\d{4})\))?\s*$', expand=False)
+        logger.info('proceed_items method successfully executed')
         return items_matrix
 
     def proceed_users(self, users_matrix: pd.DataFrame):
+        logger.info('started proceed_users method')
+        logger.info('proceed_users method successfully executed')
         return users_matrix
 
     def normalize_matrix(self, matrix: pd.DataFrame):
+        logger.info('started normalize_matrix method')
         # mean_user_rating = np.mean(matrix.values, axis=1).reshape(-1, 1)
         mean_user_rating = np.nanmean(matrix.values, axis=1).reshape(-1, 1)
         std_user_rating = np.nanstd(matrix.values, axis=1).reshape(-1, 1)
@@ -157,22 +169,29 @@ class RecSysMF(object):
         mean_user_rating[np.isnan(mean_user_rating)] = 0
         std_user_rating[np.isnan(std_user_rating)] = 0
 
+        logger.info('normalize_matrix method successfully executed')
         return matrix, mean_user_rating, std_user_rating
 
     def normalize_row(self, row: pd.DataFrame):
+        logger.info('started normalize_row method')
         mean_user_rating = np.nanmean(row.values, axis=1).reshape(-1, 1)
         std_user_rating = np.nanstd(row.values, axis=1).reshape(-1, 1)
         row_normalized_values = (row.values - mean_user_rating) / std_user_rating
         row = pd.DataFrame(data=row_normalized_values, index=row.index, columns=row.columns).fillna(0)
+        logger.info('normalize_row method successfully executed')
         return row, mean_user_rating, std_user_rating
 
     def get_movies_ids(self, predictions: pd.DataFrame):
+        logger.info('started get_movies_ids method')
         ids = predictions.columns.values
+        logger.info('get_movies_ids method successfully executed')
         return [int(x) for x in ids]
 
     def evaluate(self, test_data_path: str = None):
+        logger.info('started evaluate method')
         if self.trained == False:
-            raise Exception('Model not trained!')
+            logger.error('evaluate method not executed as model not train')
+            return
 
         self.warmup()
         if test_data_path == None:
@@ -187,16 +206,18 @@ class RecSysMF(object):
         test_dataset = self.create_user_item_rating_dataframe(self.users_matrix, self.items_matrix, self.ratings_test)
 
         # print('self.calculate_rmse(test_dataset, self.model.data)')
-        print(self.model.data, test_dataset)
+        # print(self.model.data, test_dataset)
 
         rmse = self.calculate_rmse(test_dataset, self.model.data)
         # rmse2 = self.calc_rmse2(self.model.data)
 
-        # print(f'RMSE: {rmse}')
+        print(f'RMSE: {rmse}')
         # print(f'RMSE: {rmse2}')
+        logger.info('evaluate method successfully executed')
         return rmse
 
     def calculate_rmse(self, dataset: pd.DataFrame, preds: pd.DataFrame):
+        logger.info('started calculate_rmse method')
         real_marks = []
         predictions = []
         for index, row in dataset.iterrows():
@@ -207,17 +228,19 @@ class RecSysMF(object):
             real_marks.append(rating)
             predictions.append(preds[movie_id][user_id])
 
+        logger.info('calculate_rmse method successfully executed')
         return mean_squared_error(real_marks, predictions, squared=False)
 
-    def calc_rmse2(self, preds):
-        test_dataset = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
-        print(test_dataset)
-        rmse = np.nanmean((test_dataset.values - preds.values) ** 2)
-        print('rmse2', rmse)
-        return rmse
+    # def calc_rmse2(self, preds):
+    #     test_dataset = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
+    #     print(test_dataset)
+    #     rmse = np.nanmean((test_dataset.values - preds.values) ** 2)
+    #     print('rmse2', rmse)
+    #     return rmse
 
     #### surprise ####
     def surprise_train(self, train_data_path: str = None):
+        logger.info('started surprise_train method')
         if train_data_path == None:
             train_data_path = self.options.train_data_path
 
@@ -227,42 +250,45 @@ class RecSysMF(object):
         self.surprise_fit_model(dataset)
         self.trained = True
         print('trained')
+        logger.info('surprise_train method successfully executed')
         return
 
     def surprise_get_dataset(self, ratings: pd.DataFrame):
         return Dataset.load_from_df(ratings[['user_id', 'movie_id', 'rating']], reader=Reader(rating_scale=(1, 5)))
 
     def surprise_fit_model(self, dataset: surprise.Dataset):
+        logger.info('stared surprise_fit_model method')
         self.model = SVD(n_factors=50)
         self.model.fit(dataset.build_full_trainset())
+        logger.info('surprise_fit_model method successfully executed')
 
     def surprise_make_predictions(self, dataset: surprise.Dataset):
+        logger.info('stared surprise_make_predictions method')
         real_marks = []
         predictions = []
         for row in dataset.build_full_trainset().build_testset():
             real_marks.append(row[2])
             predictions.append(self.model.predict(row[0], row[1]).est)
 
+        logger.info('surprise_make_predictions method successfully executed')
         return np.array(real_marks), np.array(predictions)
 
     def surprise_calculate_rmse(self, real: np.matrix, pred: np.matrix):
         return mean_squared_error(real, pred, squared=False)
 
     def surprise_evaluate(self, test_data_path: str = None):
+        logger.info('stared surprise_evaluate method')
         if self.trained == False:
-            raise Exception('Model not trained!')
-
+            logger.error('surprise_evaluate method not executed as model not train')
+            return
         if test_data_path == None:
             test_data_path = self.options.test_data_path
-
         self.ratings_test = self.load_ratings(test_data_path)
-
         dataset = self.surprise_get_dataset(self.ratings_test)
-
         real_marks, predictions = self.surprise_make_predictions(dataset)
-
         rmse = self.surprise_calculate_rmse(real_marks, predictions)
 
+        logger.info('surprise_evaluate method successfully executed')
         return rmse
 
     # query handlers
@@ -277,7 +303,9 @@ class RecSysMF(object):
         # t тк вектор - фильм
         similarity_matrix = cosine_similarity(items_matrix, items_matrix)
         # нуля чтоб сам себя не рекоммендовал
+
         np.fill_diagonal(similarity_matrix, 0)
+
         similarity_df = pd.DataFrame(similarity_matrix, self.model.data.columns, self.model.data.columns)
         return similarity_df
 
@@ -298,8 +326,10 @@ class RecSysMF(object):
         return [items_idxs, items]
 
     def predict(self, items_ratings: list, M: int = 10):
+        logger.info('started predict method')
         if len(items_ratings) != 2:
-            raise Exception('Wrong input!')
+            logger.error('Wrong input: array dim must equals 2')
+            return
         # print('here')
         ratings = items_ratings[1]
         items_ids = items_ratings[0]
@@ -312,10 +342,12 @@ class RecSysMF(object):
         # print('new user row', new_user_row.shape)
 
         normalized_row, mean_user_rating, std_user_rating = self.normalize_row(new_user_row)
+        logger.info('normalized_row row in predict method')
 
         # print(new_user_row)
 
         weights = cosine_similarity(normalized_row.values * 1000, self.user_item_matrix * 1000).T
+        logger.info('calcualte similarity matrix in predict')
 
         # gt0 = (weights > 0).sum()
 
@@ -325,9 +357,12 @@ class RecSysMF(object):
 
         output = np.average(self.user_item_matrix, axis=0, weights=weights)
 
+
         # print('just average', output)
 
         marks = (output * std_user_rating + mean_user_rating)[0]
+
+        logger.info('calculate marks in predict method')
 
         # print('marks', marks, marks.shape)
         #
@@ -358,6 +393,7 @@ class RecSysMF(object):
         films.sort_values('movie_id', ascending=False)['title'].values.tolist()
 
         movies_names = self.sort_items_by_ids(films, best_movies_cols_ids)
+        logger.info('recieved best movies names in predict method')
 
         # print('asd', movies_names)
 
@@ -393,9 +429,11 @@ class RecSysMF(object):
         # items_ratings = self.model.data.T[most_similar_user_id].sort_values(ascending=False)[:M].values.tolist()
         # items_names = self.find_items_by_ids(items_ids).title.values.tolist()
 
+        logger.info('predict method successfully executed')
         return [movies_names, best_movies_marks.tolist()]
 
     def predict_dataset(self, dataset_path: str, m: int = 5):
+        logger.info('started predict_dataset method')
         if dataset_path is None:
             dataset_path = self.options.test_data_path
 
@@ -404,12 +442,13 @@ class RecSysMF(object):
 
         test_matrix = self.fill_missed_values(test_matrix)
 
-        top_items_names, top_items_ratings = self.find_top_items_for_users(test_matrix)
+        top_items_names, top_items_ratings = self.find_top_items_for_users(test_matrix, m)
 
         result = self.generate_dataframe(top_items_names, top_items_ratings, m)
 
         name = f'prediction_for_top_{m}_movies'
         result.to_csv(name)
+        logger.info('predict_dataset method successfully executed')
         return str(os.getcwd() + name)
 
     def generate_dataframe(self, items_names: list, items_ratings: list, m: int = 5):
@@ -425,6 +464,7 @@ class RecSysMF(object):
 
         res_df = pd.DataFrame(data=data, columns=columns)
         res_df.index = res_df.index + 1
+        logger.info('generate_dataframe method successfully executed')
         return res_df
 
     def find_top_items_for_users(self, test_matrix: pd.DataFrame, m: int = 5):
@@ -439,6 +479,7 @@ class RecSysMF(object):
 
             if asd % 100 == 0 and asd > 0:
                 print(f'epoch {asd}')
+                break
 
             output = np.average(self.user_item_matrix, axis=0,
                                 weights=np.broadcast_arrays(user_data[0].reshape(-1, 1), self.user_item_matrix)[0])
@@ -458,6 +499,7 @@ class RecSysMF(object):
             top_items_names.append(movies_names)
             top_items_ratings.append(best_movies_marks)
 
+        logger.info('find_top_items_for_users method successfully executed')
         return top_items_names, top_items_ratings
 
 
@@ -498,6 +540,7 @@ class RecSysMF(object):
         filled_matrix = filled_matrix.sort_index()
         filled_matrix = filled_matrix.reindex(sorted(filled_matrix.columns), axis=1)
 
+        logger.info('fill_missed_values method successfully executed')
         return filled_matrix
 
     def find_items_by_ids(self, ids: list):
@@ -518,12 +561,16 @@ class RecSysMF(object):
         new_user_row = pd.DataFrame(data=values, columns=self.model.data.columns)
         for (id, mark) in zip(items_ids, ratings):
             new_user_row[id] = mark
+
+        logger.info('init_new_row method successfully executed')
         return new_user_row
 
     def create_indexer_dict(self, items_ids: list):
         indexer = {}
         for i, val in enumerate(items_ids):
             indexer[val] = i
+
+        logger.info('create_indexer_dict method successfully executed')
         return indexer
 
     def sort_items_by_ids(self, items: pd.DataFrame, items_ids: list):
@@ -531,39 +578,43 @@ class RecSysMF(object):
         items = items.loc[items['movie_id'].isin(items_ids), :]
         items.loc[:, ['order']] = items['movie_id'].map(indexer)
         names = items.sort_values('order')['title'].values.tolist()
+        logger.info('sort_items_by_ids method successfully executed')
         return names
-
-    def test(self):
-        print('test')
-        return 'test'
 
 
 class CliWrapper(object):
     def __init__(self):
+        logger.info('started CliWrapper instance initialization')
         self.options = RecSysOptions()
         self.recsys = RecSysMF(self.options)
+        logger.info('CliWrapper instance successfully inited')
 
     def train(self, dataset: str = None):
         self.recsys.train(dataset)
+        logger.info('train method successfully executed')
 
     def evaluate(self, dataset: str = None):
         self.recsys.train()
         rmse = self.recsys.evaluate(dataset)
-        print(rmse)
+        logger.info('evaluate method successfully executed')
 
     def predict(self, dataset: str = None, amount: int = 5):
         self.recsys.train()
         output = self.recsys.predict_dataset(dataset, amount)
         print(output, 'predicted')
+        logger.info('predict method successfully executed')
 
     def surprise_train(self, dataset: str = None):
         self.recsys.surprise_train(dataset)
+        logger.info('surprise_train method successfully executed')
 
     def surprise_evaluate(self, dataset: str = None):
         self.recsys.surprise_train()
         rmse = self.recsys.surprise_evaluate(dataset)
         print(rmse)
+        logger.info('surprise_evaluate method successfully executed')
 
 
 if __name__ == "__main__":
     fire.Fire(CliWrapper)
+    logger.info('fire\' CliWrapper is running')
