@@ -95,9 +95,9 @@ def info():
         return make_response(jsonify({'error': 'Server is busy'}), 403)
     with LOCK:
         try:
-            # run service func
+            info = service.info()
             logger.info('docker info successfully recieved')
-            return make_response(jsonify({'message': "Will be info"}))
+            return make_response(jsonify({'message': info}))
         except Exception as e:
             logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
@@ -113,6 +113,36 @@ def reload():
             service.reload()
             logger.info('model successfully reloaded')
             return make_response(jsonify({'Result': "model successfully reloaded"}))
+        except Exception as e:
+            logger.error(e)
+            return make_response(jsonify({'error': 'Something went wrong'}), 500)
+
+
+@app.route('/api/evaluate', methods=['POST'])
+def evaluate():
+    logger.info('reached /api/evaluate/ endpoint')
+    if LOCK.locked():
+        return make_response(jsonify({'error': 'server is busy'}), 403)
+    with LOCK:
+        try:
+            service.evaluate()
+            logger.info('model successfully evaluated')
+            return make_response(jsonify({'Result': "model successfully evaluated"}))
+        except Exception as e:
+            logger.error(e)
+            return make_response(jsonify({'error': 'Something went wrong'}), 500)
+
+
+@app.route('/api/surprise_evaluate', methods=['POST'])
+def surprise_evaluate():
+    logger.info('reached /api/surprise_evaluate/ endpoint')
+    if LOCK.locked():
+        return make_response(jsonify({'error': 'server is busy'}), 403)
+    with LOCK:
+        try:
+            service.surprise_evaluate()
+            logger.info('model successfully evaluated, surprise')
+            return make_response(jsonify({'Result': "model successfully evaluated surprise"}))
         except Exception as e:
             logger.error(e)
             return make_response(jsonify({'error': 'Something went wrong'}), 500)

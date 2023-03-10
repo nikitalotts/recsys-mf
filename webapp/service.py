@@ -53,5 +53,17 @@ class Service():
         logger.info('Service log method successfully executed')
         return logs_rows
 
+    def surprise_evaluate(self):
+        logger.info('Service surprise_evaluate method started')
+        self.model.surprise_train()
+        self.model.surprise_evaluate()
+        logger.info('Service surprise_evaluate method successfully executed')
+
+    def info(self):
+        logger.info('Service info method started')
+        info = self.model.get_info()
+        logger.info('Service info method successfully executed')
+        return info
+
 
 

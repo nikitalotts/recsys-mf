@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import fire
+import pytz
 from skimage.metrics import mean_squared_error
 
 from SvdModel import *
@@ -41,6 +42,7 @@ class RecSysMF(object):
         self.trained = False
         self.surprise_matrix = None
         self.items_similarity_matrix = None
+        self.creation_time = datetime.now(pytz.timezone("Asia/Barnaul")).strftime("%m-%d-%Y:::%H:%M:%S.%f:::UTC%Z")
         # self.creation_date = str(datetime.now())
         logging.info('RecSysMF instance successfully inited')
 
@@ -64,6 +66,10 @@ class RecSysMF(object):
         self.users_matrix = self.proceed_users(self.users_matrix)
         self.items_matrix = self.proceed_items(self.items_matrix)
         # logger.info(f"Model: {self.options.model} successfully loaded: {datetime.now()}")
+
+        # renew results
+        self.options.current_accuracy = 'Model haven\'t been evaluated yet'
+        self.options.datetime_accuracy_test = 'Model haven\'t been evaluated yet'
 
     def train(self, train_data_path: str = None):
         logger.info(f'started train method, {train_data_path}')
@@ -213,7 +219,9 @@ class RecSysMF(object):
         # rmse2 = self.calc_rmse2(self.model.data)
 
         print(f'RMSE: {rmse}')
+        logger.info(f'evaluated with RMSE:{rmse}')
         # print(f'RMSE: {rmse2}')
+        self.set_evaluate_results(rmse)
         logger.info('evaluate method successfully executed')
         return rmse
 
@@ -289,7 +297,8 @@ class RecSysMF(object):
         dataset = self.surprise_get_dataset(self.ratings_test)
         real_marks, predictions = self.surprise_make_predictions(dataset)
         rmse = self.surprise_calculate_rmse(real_marks, predictions)
-
+        self.set_evaluate_results(rmse)
+        logger.info(f'surprise: evaluated with RMSE:{rmse}')
         logger.info('surprise_evaluate method successfully executed')
         return rmse
 
@@ -583,6 +592,21 @@ class RecSysMF(object):
         names = items.sort_values('order')['title'].values.tolist()
         logger.info('sort_items_by_ids method successfully executed')
         return names
+
+    def set_evaluate_results(self, rmse: float):
+        self.options.current_accuracy = rmse
+        self.options.datetime_accuracy_test = datetime.now(pytz.timezone("Asia/Barnaul")).strftime("%m-%d-%Y:::%H:%M:%S.%f:::UTC%Z")
+
+    def get_info(self):
+        info_dict = {
+            'accuracy(rmse)' : self.options.current_accuracy,
+            'time': self.options.datetime_accuracy_test,
+            'current_user': self.options.credentials,
+            'model_author': self.options.author,
+            'docker_built_time': self.creation_time
+        }
+
+        return info_dict
 
 
 class CliWrapper(object):

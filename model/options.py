@@ -39,6 +39,12 @@ class RecSysOptions():
         self.rating_scale = (1, 5)
         self.n_epochs = 20
 
+        # user data
+        self.credentials = os.getlogin()
+        self.current_accuracy = 'Model haven\'t been evaluated yet'
+        self.datetime_accuracy_test = 'Model haven\'t been evaluated yet'
+        self.author = '@nikitalotts'
+
         self.init_data()
         logger.info('RecSysOptions instance successfully inited')
 
