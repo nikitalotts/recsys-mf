@@ -50,7 +50,8 @@ class RecSysMF(object):
         if model_type == 'SVD':
             self.model = SvdModel()
         else:
-            logger.error(f'Invalid model type: {model_type}')
+            logger.error(f'NameError: Invalid model type: {model_type}')
+            raise NameError('tried to load invalid model type: {model_type}')
 
         if self.is_model_exists(self.options.model_data_path):
             self.model.load_data(self.options)
@@ -191,7 +192,7 @@ class RecSysMF(object):
         logger.info('started evaluate method')
         if self.trained == False:
             logger.error('evaluate method not executed as model not train')
-            return
+            raise Exception('model not trained')
 
         self.warmup()
         if test_data_path == None:
@@ -280,7 +281,8 @@ class RecSysMF(object):
         logger.info('stared surprise_evaluate method')
         if self.trained == False:
             logger.error('surprise_evaluate method not executed as model not train')
-            return
+            raise Exception('surprise_evaluate: model not trained')
+
         if test_data_path == None:
             test_data_path = self.options.test_data_path
         self.ratings_test = self.load_ratings(test_data_path)
@@ -329,7 +331,8 @@ class RecSysMF(object):
         logger.info('started predict method')
         if len(items_ratings) != 2:
             logger.error('Wrong input: array dim must equals 2')
-            return
+            raise ValueError('Wrong input: array dim is not equals 2')
+
         # print('here')
         ratings = items_ratings[1]
         items_ids = items_ratings[0]

@@ -48,7 +48,7 @@ class Service():
 
     def log(self, n_rows: int = 20):
         logger.info('Service log method started')
-        with open(LOG_FILE_PATH, "r") as log_f:
+        with open(LOG_FILE_PATH, "r", encoding='windows-1251') as log_f:
             logs_rows = log_f.readlines()[-n_rows:]
         logger.info('Service log method successfully executed')
         return logs_rows
