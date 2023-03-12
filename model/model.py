@@ -183,6 +183,9 @@ class RecSysMF(object):
         logger.info('started normalize_row method')
         mean_user_rating = np.nanmean(row.values, axis=1).reshape(-1, 1)
         std_user_rating = np.nanstd(row.values, axis=1).reshape(-1, 1)
+        if std_user_rating == 0:
+            mean_user_rating -= 0.1
+            std_user_rating += 0.1
         row_normalized_values = (row.values - mean_user_rating) / std_user_rating
         row = pd.DataFrame(data=row_normalized_values, index=row.index, columns=row.columns).fillna(0)
         logger.info('normalize_row method successfully executed')

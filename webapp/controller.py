@@ -12,12 +12,13 @@ from pydotplus import basestring
 from webapp.service import Service
 
 LOCK = Lock()
-app = Flask(__name__)
 service = Service()
 logger = logging.getLogger(__name__)
 
+app = Flask(__name__)
+app.config['APPLICATION_ROOT'] = '/api'
 
-@app.route('/api/predict', methods=['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
     logger.info('reached /api/predict/ endpoint')
     if LOCK.locked():
@@ -68,7 +69,7 @@ def predict():
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
-@app.route('/api/log', methods=['GET'])
+@app.route('/log', methods=['GET'])
 def log():
     # try exept
     # with open("app.log", "r") as log_f:
@@ -88,7 +89,7 @@ def log():
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
-@app.route('/api/info', methods=['GET'])
+@app.route('/info', methods=['GET'])
 def info():
     logger.info('reached /api/info/ endpoint')
     if LOCK.locked():
@@ -103,7 +104,7 @@ def info():
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
-@app.route('/api/reload', methods=['POST'])
+@app.route('/reload', methods=['POST'])
 def reload():
     logger.info('reached /api/reload/ endpoint')
     if LOCK.locked():
@@ -118,7 +119,7 @@ def reload():
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
-@app.route('/api/evaluate', methods=['POST'])
+@app.route('/evaluate', methods=['POST'])
 def evaluate():
     logger.info('reached /api/evaluate/ endpoint')
     if LOCK.locked():
@@ -133,7 +134,7 @@ def evaluate():
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
-@app.route('/api/surprise_evaluate', methods=['POST'])
+@app.route('/surprise_evaluate', methods=['POST'])
 def surprise_evaluate():
     logger.info('reached /api/surprise_evaluate/ endpoint')
     if LOCK.locked():
@@ -148,7 +149,7 @@ def surprise_evaluate():
             return make_response(jsonify({'error': 'Something went wrong'}), 500)
 
 
-@app.route('/api/similar', methods=['POST'])
+@app.route('/similar', methods=['POST'])
 def similar():
     logger.info('reached /api/similar/ endpoint')
     if LOCK.locked():
