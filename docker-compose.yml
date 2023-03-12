@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  recsys:
+        container_name: recommemder_system
+        build: ./recsys
+        restart: on-failure
+        ports:
+          - 5000:5000
+        volumes:
+          - "./data:/data"

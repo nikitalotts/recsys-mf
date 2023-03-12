@@ -58,6 +58,11 @@ class RecSysOptions():
     def init_data(self):
         logger.info('started init_data method')
         self.model_store = os.path.join(os.path.join(self.core_directory, 'model/store/'))
+
+        if not os.path.exists(self.model_store):
+            os.makedirs(self.model_store)
+            logger.info(f'created model/store/ directory')
+
         self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
 
         # warm-up data
