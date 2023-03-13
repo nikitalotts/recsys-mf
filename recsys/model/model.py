@@ -494,7 +494,6 @@ class RecSysMF(object):
 
             if asd % 100 == 0 and asd > 0:
                 print(f'epoch {asd}')
-                break
 
             output = np.average(self.user_item_matrix, axis=0,
                                 weights=np.broadcast_arrays(user_data[0].reshape(-1, 1), self.user_item_matrix)[0])

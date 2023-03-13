@@ -1,3 +1,8 @@
+"""
+SvdModel class implements recommender system based on singular value decomposition
+and its implementation in scipy.sparse.linalg.svds method
+"""
+
 import os
 import logging
 
@@ -19,6 +24,7 @@ class SvdModel(BaseModel):
         logging.info('SvdModel instance successfully inited')
 
     def load_data(self, options: RecSysOptions):
+        """Implementation of BaseModel's abstract load_data method"""
         logging.info(f'started load_data method, data_path:{options.model_data_path}')
         model_path_split = os.path.splitext(options.model_data_path)
         options.model_name = model_path_split[0]
@@ -32,26 +38,18 @@ class SvdModel(BaseModel):
         logging.info('load_data method successfully executed')
         return
 
-    def fit(self, matrix: pd.DataFrame, n_vectors: int, mean_user_rating: np.ndarray, std_user_rating: np.ndarray): #, std_user_rating: np.ndarray):
+    def fit(self, matrix: pd.DataFrame, n_vectors: int, mean_user_rating: np.ndarray, std_user_rating: np.ndarray):
+        """Implementation of BaseModel's abstract fit method but it uses different input parameters"""
         logging.info(f'started fit method')
-        # print(matrix)
-        # print('n vec', n_vectors)
-        # print('n mean', mean_user_rating)
-        # print(type(matrix))
-        # print(type(n_vectors))
-        # print(type(mean_user_rating))
-        # print(type(std_user_rating))
         u, sigma, vt = svds(matrix.values, k=n_vectors)
         sigma_diag_matrix = np.diag(sigma)
-        # predicted_ratings = np.dot(np.dot(u, sigma_diag_matrix), vt) * std_user_rating + mean_user_rating
-        # predicted_ratings = np.dot(np.dot(u, sigma_diag_matrix), vt) + mean_user_rating
-        # predicted_ratings = (( u @ sigma_diag_matrix @ vt ) + 1) * mean_user_rating
         predicted_ratings = np.dot(np.dot(u, sigma_diag_matrix), vt) * std_user_rating + mean_user_rating
         self.data = pd.DataFrame(predicted_ratings, columns=matrix.columns)
         logging.info('fit method successfully inited')
         return self.data
 
     def save(self, name: str, options: RecSysOptions):
+        """Implementation of BaseModel's abstract save method"""
         logging.info('started save method')
         if name != options.model_name:
             options.renew_model_name_and_path(name)
