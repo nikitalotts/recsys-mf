@@ -601,12 +601,18 @@ class RecSysMF(object):
         self.options.datetime_accuracy_test = datetime.now(pytz.timezone("Asia/Barnaul")).strftime("%m-%d-%Y:::%H:%M:%S.%f:::UTC%Z")
 
     def get_info(self):
+        if not os.path.exists(self.options.credentials_file):
+            logger.error(f'credentials file is not found on path: {self.options.credentials_file}')
+            raise FileNotFoundError('credentials file is not found')
+        credentials_file = open(self.options.credentials_file, 'r')
+        lines = credentials_file.readlines()
+        creation_date, author = lines[0].strip(), lines[1].strip()
+
         info_dict = {
             'accuracy(rmse)' : self.options.current_accuracy,
             'time': self.options.datetime_accuracy_test,
-            'current_user': self.options.credentials,
-            'model_author': self.options.author,
-            'docker_built_time': self.creation_time
+            'docker_creation_time_datetime': creation_date,
+            'credentials': author
         }
 
         return info_dict

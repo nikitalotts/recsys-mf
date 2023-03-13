@@ -4,6 +4,9 @@ COPY . .
 
 WORKDIR ./
 
+RUN echo "$(date)" > credentials.txt &&\
+    echo "Nikita Loots, 3rd grade, group 972001" >> credentials.txt
+
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 ENV PYTHONPATH "${PYTHONPATH}:$PWD/model"
