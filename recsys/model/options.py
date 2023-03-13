@@ -40,7 +40,7 @@ class RecSysOptions():
         self.n_epochs = 20
 
         # user data
-        self.credentials = os.environ.get('USER', os.environ.get('USERNAME'))
+        self.credentials_file = os.path.join(os.path.join(self.core_directory, 'credentials.txt'))
         self.current_accuracy = 'Model haven\'t been evaluated yet'
         self.datetime_accuracy_test = 'Model haven\'t been evaluated yet'
         self.author = '@nikitalotts'
