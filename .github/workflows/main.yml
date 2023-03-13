@@ -36,6 +36,6 @@ jobs:
         with:
           file: ./recsys/Dockerfile
           context: ./recsys
-          push: False
+          push: True
           tags: nikitalotts/recsys-docker-image:latest
           
