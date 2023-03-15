@@ -96,18 +96,18 @@ class RecSysMF(object):
             raise NameError('tried to load invalid model type: {model_type}')
 
         # model's data load
-        if self.is_model_exists(self.options.model_data_path):
+        if self.__is_model_exists(self.options.model_data_path):
             self.model.load_data(self.options)
         else:
             logger.warning(f'model doesn\'t exist: {self.options.model_data_path}')
 
         # load user/movie data
-        self.users_matrix, self.n_users = self.load_users_data(self.options.users_data_path)
-        self.items_matrix, self.n_items = self.load_items_data(self.options.items_data_path)
+        self.users_matrix, self.n_users = self.__load_users_data(self.options.users_data_path)
+        self.items_matrix, self.n_items = self.__load_items_data(self.options.items_data_path)
 
         # proceeding loaded data
-        self.users_matrix = self.proceed_users(self.users_matrix)
-        self.items_matrix = self.proceed_items(self.items_matrix)
+        self.users_matrix = self.__proceed_users(self.users_matrix)
+        self.items_matrix = self.__proceed_items(self.items_matrix)
 
         # renew statistics as we renew model
         self.options.current_accuracy = 'Model haven\'t been evaluated yet'
@@ -132,13 +132,13 @@ class RecSysMF(object):
             logger.info(f'given train_data_path is none, train_data_path changed to options.train_data_path: {self.options.train_data_path}')
 
         # load ratings
-        self.ratings_train = self.load_ratings(train_data_path)
+        self.ratings_train = self.__load_ratings(train_data_path)
 
         # create movie-user matrix based on given ratings
-        self.user_item_matrix = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_train)
+        self.user_item_matrix = self.__create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_train)
 
         # normalize movie-user matrix
-        self.user_item_matrix, self.mean_user_rating, self.std_user_rating = self.normalize_matrix(
+        self.user_item_matrix, self.mean_user_rating, self.std_user_rating = self.__normalize_matrix(
             self.user_item_matrix)
 
         # fit model
@@ -151,7 +151,7 @@ class RecSysMF(object):
         print('trained')
         return
 
-    def is_model_exists(self, model_data_path: str):
+    def __is_model_exists(self, model_data_path: str):
         """Method that check if model exists on given path
 
 
@@ -163,7 +163,7 @@ class RecSysMF(object):
 
         return os.path.exists(model_data_path)
 
-    def create_user_item_matrix(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
+    def __create_user_item_matrix(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
         """Method that create user-movie matrix based on user, movie and ratings data
 
 
@@ -175,17 +175,17 @@ class RecSysMF(object):
         ratings: pd.DataFrame, ratings' dataframe
         """
 
-        logger.info(f'started create_user_item_matrix method')
+        logger.info(f'started __create_user_item_matrix method')
 
         # merge all data into one dataset
-        user_item_rating_dataframe = self.create_user_item_rating_dataframe(users, items, ratings)
+        user_item_rating_dataframe = self.__create_user_item_rating_dataframe(users, items, ratings)
 
         # create povit table(or matrix)
         matrix = user_item_rating_dataframe.pivot(index='user_id', columns='movie_id', values='rating')
-        logger.info(f'create_user_item_matrix method successfully executed')
+        logger.info(f'__create_user_item_matrix method successfully executed')
         return matrix
 
-    def create_user_item_rating_dataframe(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
+    def __create_user_item_rating_dataframe(self, users: pd.DataFrame, items: pd.DataFrame, ratings: pd.DataFrame):
         """Method that merge user, movie and ratings data into one dataframe
 
 
@@ -197,33 +197,12 @@ class RecSysMF(object):
         ratings: pd.DataFrame, ratings' dataframe
         """
 
-        logger.info('started create_user_item_rating_dataframe method')
+        logger.info('started __create_user_item_rating_dataframe method')
         dataframe = pd.merge(ratings, items, on='movie_id', how='left').merge(users, on='user_id', how='left')
-        logger.info(f'create_user_item_rating_dataframe method successfully executed')
+        logger.info(f'__create_user_item_rating_dataframe method successfully executed')
         return dataframe
 
-    def load_model_data(self, model_path: str):
-        """Method that load model data
-
-
-        Parameters
-        ----------
-
-        model_path: string, path to model's previous predictions
-        """
-
-        model_path_split = os.path.splitext(model_path)
-        self.options.model_name = model_path_split[0]
-        self.options.model_extention = model_path_split[1][1:]
-
-        # method only can load .csv data
-        if self.options.model_extention == 'csv':
-            self.model = pd.read_csv(self.options.model_store + f'{model_path}', encoding=self.options.encoding)
-        else:
-            raise Exception("Wrong model extension")
-        return
-
-    def load_users_data(self, users_data: str):
+    def __load_users_data(self, users_data: str):
         """Method that load users' data
 
 
@@ -233,7 +212,7 @@ class RecSysMF(object):
         users_data: string, path to users' data on disk
         """
 
-        logger.info('started load_users_data method')
+        logger.info('started __load_users_data method')
 
         # read users data from disk
         users = pd.read_csv(users_data, names=['user_id', 'gender', 'age', 'occupation', 'zip-code'],
@@ -243,10 +222,10 @@ class RecSysMF(object):
         # renew users number
         n_users = users['user_id'].nunique()
 
-        logger.info('load_users_data method successfully executed')
+        logger.info('__load_users_data method successfully executed')
         return users, n_users
 
-    def load_items_data(self, items_data: str):
+    def __load_items_data(self, items_data: str):
         """Method that load movies' data
 
 
@@ -266,7 +245,7 @@ class RecSysMF(object):
 
         return items, n_items
 
-    def load_ratings(self, ratings_data_path: str):
+    def __load_ratings(self, ratings_data_path: str):
         """Method that load ratings' (test or train) data
 
 
@@ -276,17 +255,17 @@ class RecSysMF(object):
         ratings_data_path: string, path to ratings' data on disk
         """
 
-        logger.info(f'started load_ratings method, {ratings_data_path}')
+        logger.info(f'started __load_ratings method, {ratings_data_path}')
 
         # read ratings data from disk
         ratings = pd.read_csv(ratings_data_path, names=['user_id', 'movie_id', 'rating', 'date'],
                               sep=self.options.data_loading_sep, engine=self.options.data_loading_engine,
                               encoding=self.options.encoding)
 
-        logger.info(f'load_ratings method successfully inited')
+        logger.info(f'__load_ratings method successfully inited')
         return ratings
 
-    def proceed_items(self, items_matrix: pd.DataFrame):
+    def __proceed_items(self, items_matrix: pd.DataFrame):
         """Method that proceed loaded movies' dataframe
 
 
@@ -296,15 +275,15 @@ class RecSysMF(object):
         items_matrix: pd.DataFrame, movies' dataframe
         """
 
-        logger.info('started proceed_items method')
+        logger.info('started __proceed_items method')
 
         # extract release_year year from movie title
         items_matrix['release_year'] = items_matrix['title'].str.extract(r'(?:\((\d{4})\))?\s*$', expand=False)
 
-        logger.info('proceed_items method successfully executed')
+        logger.info('__proceed_items method successfully executed')
         return items_matrix
 
-    def proceed_users(self, users_matrix: pd.DataFrame):
+    def __proceed_users(self, users_matrix: pd.DataFrame):
         """Method that proceed loaded users' dataframe
         (now actually do nothing)
 
@@ -314,11 +293,11 @@ class RecSysMF(object):
         users_matrix: pd.DataFrame, users' dataframe
         """
 
-        logger.info('started proceed_users method')
-        logger.info('proceed_users method successfully executed')
+        logger.info('started __proceed_users method')
+        logger.info('__proceed_users method successfully executed')
         return users_matrix
 
-    def normalize_matrix(self, matrix: pd.DataFrame):
+    def __normalize_matrix(self, matrix: pd.DataFrame):
         """Method that normalize user-movie matrix(by users)
 
         Parameters
@@ -327,7 +306,7 @@ class RecSysMF(object):
         matrix: pd.DataFrame, user-movie matrix
         """
 
-        logger.info('started normalize_matrix method')
+        logger.info('started __normalize_matrix method')
 
         # calculate user's mean rating
         mean_user_rating = np.nanmean(matrix.values, axis=1).reshape(-1, 1)
@@ -345,10 +324,10 @@ class RecSysMF(object):
         mean_user_rating[np.isnan(mean_user_rating)] = 0
         std_user_rating[np.isnan(std_user_rating)] = 0
 
-        logger.info('normalize_matrix method successfully executed')
+        logger.info('__normalize_matrix method successfully executed')
         return matrix, mean_user_rating, std_user_rating
 
-    def normalize_row(self, row: pd.DataFrame):
+    def __normalize_row(self, row: pd.DataFrame):
         """Method that normalize users ratings' row
 
         Parameters
@@ -357,7 +336,7 @@ class RecSysMF(object):
         row: pd.DataFrame, row of matrix
         """
 
-        logger.info('started normalize_row method')
+        logger.info('started __normalize_row method')
 
         # calculate user's mean rating
         mean_user_rating = np.nanmean(row.values, axis=1).reshape(-1, 1)
@@ -377,10 +356,10 @@ class RecSysMF(object):
 
         # create new row with normalized values and fill nans with 0
         row = pd.DataFrame(data=row_normalized_values, index=row.index, columns=row.columns).fillna(0)
-        logger.info('normalize_row method successfully executed')
+        logger.info('__normalize_row method successfully executed')
         return row, mean_user_rating, std_user_rating
 
-    def get_movies_ids(self, predictions: pd.DataFrame):
+    def __get_movies_ids(self, predictions: pd.DataFrame):
         """Method that return all movies ids in given data
 
         Parameters
@@ -389,9 +368,9 @@ class RecSysMF(object):
         predictions: pd.DataFrame, matrix data
         """
 
-        logger.info('started get_movies_ids method')
+        logger.info('started __get_movies_ids method')
         ids = predictions.columns.values
-        logger.info('get_movies_ids method successfully executed')
+        logger.info('__get_movies_ids method successfully executed')
         return [int(x) for x in ids]
 
     def evaluate(self, test_data_path: str = None):
@@ -418,24 +397,24 @@ class RecSysMF(object):
             test_data_path = self.options.test_data_path
 
         # load test ratings
-        self.ratings_test = self.load_ratings(test_data_path)
+        self.ratings_test = self.__load_ratings(test_data_path)
 
         # create test dataset
-        test_dataset = self.create_user_item_rating_dataframe(self.users_matrix, self.items_matrix, self.ratings_test)
+        test_dataset = self.__create_user_item_rating_dataframe(self.users_matrix, self.items_matrix, self.ratings_test)
 
         # calculate rmse
-        rmse = self.calculate_rmse(test_dataset, self.model.data)
+        rmse = self.__calculate_rmse(test_dataset, self.model.data)
 
         print(f'RMSE: {rmse}')
         logger.info(f'evaluated with RMSE:{rmse}')
 
         # change model's info
-        self.set_evaluate_results(rmse)
+        self.__set_evaluate_results(rmse)
         logger.info('evaluate method successfully executed')
 
         return rmse
 
-    def calculate_rmse(self, dataset: pd.DataFrame, preds: pd.DataFrame):
+    def __calculate_rmse(self, dataset: pd.DataFrame, preds: pd.DataFrame):
         """Method that calculate model RMSE
 
         Parameters
@@ -445,7 +424,7 @@ class RecSysMF(object):
         preds: pd.DataFrame, models' predictions matrix
         """
 
-        logger.info('started calculate_rmse method')
+        logger.info('started __calculate_rmse method')
 
         real_marks = []
         predictions = []
@@ -459,7 +438,7 @@ class RecSysMF(object):
             real_marks.append(rating)
             predictions.append(preds[movie_id][user_id])
 
-        logger.info('calculate_rmse method successfully executed')
+        logger.info('__calculate_rmse method successfully executed')
 
         # calculate and return RMSE
         return mean_squared_error(real_marks, predictions, squared=False)
@@ -481,19 +460,19 @@ class RecSysMF(object):
             train_data_path = self.options.train_data_path
 
         # load ratings
-        self.ratings_train = self.load_ratings(train_data_path)
+        self.ratings_train = self.__load_ratings(train_data_path)
 
-        dataset = self.surprise_get_dataset(self.ratings_train)
+        dataset = self.__surprise_get_dataset(self.ratings_train)
 
         # fit model
-        self.surprise_fit_model(dataset)
+        self.__surprise_fit_model(dataset)
 
         self.trained = True
         print('trained')
         logger.info('surprise_train method successfully executed')
         return
 
-    def surprise_get_dataset(self, ratings: pd.DataFrame):
+    def __surprise_get_dataset(self, ratings: pd.DataFrame):
         """Method that create dataset for sklearn-surprise based model
 
 
@@ -505,7 +484,7 @@ class RecSysMF(object):
 
         return Dataset.load_from_df(ratings[['user_id', 'movie_id', 'rating']], reader=Reader(rating_scale=(1, 5)))
 
-    def surprise_fit_model(self, dataset: surprise.Dataset):
+    def __surprise_fit_model(self, dataset: surprise.Dataset):
         """Method that create and fit sklearn-surprise based model
 
 
@@ -515,16 +494,16 @@ class RecSysMF(object):
          dataset: surprise.Dataset, train dataseе
         """
 
-        logger.info('stared surprise_fit_model method')
+        logger.info('stared __surprise_fit_model method')
 
         # create model
         self.model = SVD(n_factors=50)
 
         # fit model
         self.model.fit(dataset.build_full_trainset())
-        logger.info('surprise_fit_model method successfully executed')
+        logger.info('__surprise_fit_model method successfully executed')
 
-    def surprise_make_predictions(self, dataset: surprise.Dataset):
+    def __surprise_make_predictions(self, dataset: surprise.Dataset):
         """Method that preding ratings from test dataset date
 
 
@@ -535,7 +514,7 @@ class RecSysMF(object):
         """
 
 
-        logger.info('stared surprise_make_predictions method')
+        logger.info('stared __surprise_make_predictions method')
 
         real_marks = []
         predictions = []
@@ -545,10 +524,10 @@ class RecSysMF(object):
             real_marks.append(row[2])
             predictions.append(self.model.predict(row[0], row[1]).est)
 
-        logger.info('surprise_make_predictions method successfully executed')
+        logger.info('__surprise_make_predictions method successfully executed')
         return np.array(real_marks), np.array(predictions)
 
-    def surprise_calculate_rmse(self, real: np.matrix, pred: np.matrix):
+    def __surprise_calculate_rmse(self, real: np.matrix, pred: np.matrix):
         """Method that calculate RSME based on sklearn-suprise based model's predictions
 
 
@@ -568,7 +547,7 @@ class RecSysMF(object):
         Parameters
         ----------
 
-        dataset : string, path to test dataset, model will train with dataset
+        test_data_path : string, path to test dataset, model will train with dataset
         that stored in default train dataset path
         """
 
@@ -584,24 +563,24 @@ class RecSysMF(object):
             test_data_path = self.options.test_data_path
 
         # load test ratings
-        self.ratings_test = self.load_ratings(test_data_path)
+        self.ratings_test = self.__load_ratings(test_data_path)
 
         # create test dataset
-        dataset = self.surprise_get_dataset(self.ratings_test)
+        dataset = self.__surprise_get_dataset(self.ratings_test)
 
         # get real ratings and predicitons
-        real_marks, predictions = self.surprise_make_predictions(dataset)
+        real_marks, predictions = self.__surprise_make_predictions(dataset)
 
         # calculate RMSE
-        rmse = self.surprise_calculate_rmse(real_marks, predictions)
+        rmse = self.__surprise_calculate_rmse(real_marks, predictions)
 
         # renew model data
-        self.set_evaluate_results(rmse)
+        self.__set_evaluate_results(rmse)
         logger.info(f'surprise: evaluated with RMSE:{rmse}')
         logger.info('surprise_evaluate method successfully executed')
         return rmse
 
-    def find_item_by_name(self, received_name: str):
+    def __find_item_by_name(self, received_name: str):
         """Method to find most similar movie name to given
         basen on Levenshtein distance.
 
@@ -619,7 +598,7 @@ class RecSysMF(object):
         item_id = self.items_matrix.loc[item_index]['movie_id']
         return item_id
 
-    def calculate_items_similarity_matrix(self, items_matrix: pd.DataFrame):
+    def __calculate_items_similarity_matrix(self, items_matrix: pd.DataFrame):
         """Method that calculate movie to movie
         similarity matrix
 
@@ -637,7 +616,7 @@ class RecSysMF(object):
         similarity_df = pd.DataFrame(similarity_matrix, self.model.data.columns, self.model.data.columns)
         return similarity_df
 
-    def find_similar(self, movie_id: int, n: int = 5):
+    def __find_similar(self, movie_id: int, n: int = 5):
         """Method that find most similar {n} movies to given
 
         Parameters
@@ -652,14 +631,14 @@ class RecSysMF(object):
                               dtype=int).tolist()
 
         # get most similar movies in right order
-        items = self.sort_items_by_ids(self.items_matrix, items_idxs)
+        items = self.__sort_items_by_ids(self.items_matrix, items_idxs)
 
         # get movie indexes in right order
         items_idxs = [int(x) for x in items_idxs]
 
         return items_idxs, items
 
-    def get_similar_items(self, received_name: str = 'Bambi (1942)', amount: int = 5):
+    def get_similar_items(self, received_name: str = 'Bambi (1942)', amount: int = 5): ############
         """Method that find most similar {n} movies to given.
         Used to handle similar requests
 
@@ -671,14 +650,14 @@ class RecSysMF(object):
         """
 
         # find movie id
-        item_id = self.find_item_by_name(received_name)
+        item_id = self.__find_item_by_name(received_name)
 
         # calculate similarity matrix
         if self.items_similarity_matrix is None:
-            self.items_similarity_matrix = self.calculate_items_similarity_matrix(self.model.data.T)
+            self.items_similarity_matrix = self.__calculate_items_similarity_matrix(self.model.data.T)
 
         # return most similar movies
-        items_idxs, items = self.find_similar(item_id, amount)
+        items_idxs, items = self.__find_similar(item_id, amount)
         return [items_idxs, items]
 
     def predict(self, items_ratings: list, M: int = 10):
@@ -702,18 +681,17 @@ class RecSysMF(object):
         ratings = items_ratings[1]
         items_ids = items_ratings[0]
 
-
         # if there is movies ids array - convert ids into titles
         if not isinstance(items_ids[0], int):
-            items_ids = [self.find_item_by_name(x) for x in items_ids]
+            items_ids = [self.__find_item_by_name(x) for x in items_ids]
 
         data = [items_ids, ratings]
 
         # create new user with given ratings
-        new_user_row = self.init_new_row(data)
+        new_user_row = self.__init_new_row(data)
 
         # normalize row
-        normalized_row, mean_user_rating, std_user_rating = self.normalize_row(new_user_row)
+        normalized_row, mean_user_rating, std_user_rating = self.__normalize_row(new_user_row)
         logger.info('normalized_row row in predict method')
 
         # calculate user similarity to other users
@@ -734,9 +712,9 @@ class RecSysMF(object):
         best_movies_cols_ids = self.model.data.columns.values[best_movies_ids][0]
 
         # get top movie names
-        films = self.find_items_by_ids(best_movies_cols_ids)
+        films = self.__find_items_by_ids(best_movies_cols_ids)
         films.sort_values('movie_id', ascending=False)['title'].values.tolist()
-        movies_names = self.sort_items_by_ids(films, best_movies_cols_ids)
+        movies_names = self.__sort_items_by_ids(films, best_movies_cols_ids)
         logger.info('recieved best movies names in predict method')
 
         # get top movie ratings
@@ -748,7 +726,7 @@ class RecSysMF(object):
         logger.info('predict method successfully executed')
         return [movies_names, best_movies_marks.tolist()]
 
-    def predict_dataset(self, dataset_path: str, m: int = 5):
+    def predict_dataset(self, dataset_path: str, m: int = 5): ##################################
         """Method that predict top {m} movies for every user in test dataset.
         Used to handle CLI predict.
 
@@ -766,19 +744,19 @@ class RecSysMF(object):
             dataset_path = self.options.test_data_path
 
         # load test ratings
-        self.ratings_test = self.load_ratings(self.options.test_data_path)
+        self.ratings_test = self.__load_ratings(self.options.test_data_path)
 
         # create user-movie matrix based on test ratings
-        test_matrix = self.create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
+        test_matrix = self.__create_user_item_matrix(self.users_matrix, self.items_matrix, self.ratings_test)
 
         # fill missed from train matrix values
-        test_matrix = self.fill_missed_values(test_matrix)
+        test_matrix = self.__fill_missed_values(test_matrix)
 
         # get top movies and their ratings
-        top_items_names, top_items_ratings = self.find_top_items_for_users(test_matrix, m)
+        top_items_names, top_items_ratings = self.__find_top_items_for_users(test_matrix, m)
 
         # generate dataframe
-        result = self.generate_dataframe(top_items_names, top_items_ratings, m)
+        result = self.__generate_dataframe(top_items_names, top_items_ratings, m)
 
         # save dataframe
         name = f'prediction_for_top_{m}_movies'
@@ -789,7 +767,7 @@ class RecSysMF(object):
         # return path to result dataframe
         return str(os.getcwd() + name)
 
-    def generate_dataframe(self, items_names: list, items_ratings: list, m: int = 5):
+    def __generate_dataframe(self, items_names: list, items_ratings: list, m: int = 5):
         """Method that genarate new dataframe based on
         given movie name, movie ratings and their amount
         Used to handle CLI predict.
@@ -803,7 +781,7 @@ class RecSysMF(object):
         """
 
         # get new columns
-        columns = self.generate_new_columns(m)
+        columns = self.__generate_new_columns(m)
 
         data = []
 
@@ -819,10 +797,10 @@ class RecSysMF(object):
         res_df = pd.DataFrame(data=data, columns=columns)
         res_df.index = res_df.index + 1
 
-        logger.info('generate_dataframe method successfully executed')
+        logger.info('__generate_dataframe method successfully executed')
         return res_df
 
-    def find_top_items_for_users(self, test_matrix: pd.DataFrame, m: int = 5):
+    def __find_top_items_for_users(self, test_matrix: pd.DataFrame, m: int = 5):
         """Method that find most similar {n} movies to every given user.
         Used to handle CLI predict.
 
@@ -834,7 +812,7 @@ class RecSysMF(object):
         """
 
         # normalize test matrix
-        normalized_matrix, mean_user_rating, std_user_rating = self.normalize_matrix(test_matrix)
+        normalized_matrix, mean_user_rating, std_user_rating = self.__normalize_matrix(test_matrix)
 
         # calculate user to user similarity
         user_to_user_similarity = cosine_similarity(normalized_matrix.values, self.user_item_matrix).T
@@ -846,7 +824,7 @@ class RecSysMF(object):
         for (i, user_data) in enumerate(zip(user_to_user_similarity, std_user_rating, mean_user_rating)):
 
             if i % 100 == 0 and i > 0:
-                print(f'epoch {i}')
+                break
 
             # find every movie estimated rating for every user
             # based on user to user similarity
@@ -863,9 +841,9 @@ class RecSysMF(object):
             best_movies_cols_ids = self.model.data.columns.values[best_movies_ids][0]
 
             # get top movie names
-            items = self.find_items_by_ids(best_movies_cols_ids)
+            items = self.__find_items_by_ids(best_movies_cols_ids)
             items.sort_values('movie_id', ascending=False)['title'].values.tolist()
-            movies_names = self.sort_items_by_ids(items, best_movies_cols_ids)
+            movies_names = self.__sort_items_by_ids(items, best_movies_cols_ids)
 
             # get top movies ratings
             best_movies_marks = np.sort(output)[::-1][:m]
@@ -875,10 +853,10 @@ class RecSysMF(object):
             top_items_names.append(movies_names)
             top_items_ratings.append(best_movies_marks)
 
-        logger.info('find_top_items_for_users method successfully executed')
+        logger.info('__find_top_items_for_users method successfully executed')
         return top_items_names, top_items_ratings
 
-    def generate_new_columns(self, m):
+    def __generate_new_columns(self, m):
         """Method to generate columns pairs('movie_name_X', 'mark_X')
          for dataframe.
          Used to handle predict dataset
@@ -897,7 +875,7 @@ class RecSysMF(object):
 
         return cols
 
-    def fill_missed_values(self, test_matrix: pd.DataFrame):
+    def __fill_missed_values(self, test_matrix: pd.DataFrame):
         """Method that find missing users and movies
         in test user-movie matrix and add them to it
         with given ids
@@ -939,10 +917,10 @@ class RecSysMF(object):
         filled_matrix = filled_matrix.sort_index()
         filled_matrix = filled_matrix.reindex(sorted(filled_matrix.columns), axis=1)
 
-        logger.info('fill_missed_values method successfully executed')
+        logger.info('__fill_missed_values method successfully executed')
         return filled_matrix
 
-    def find_items_by_ids(self, ids: list):
+    def __find_items_by_ids(self, ids: list):
         """Method that find movies from movie dataset
         with given ids
 
@@ -954,7 +932,7 @@ class RecSysMF(object):
 
         return self.items_matrix.loc[self.items_matrix['movie_id'].isin(ids), :]
 
-    def init_new_row(self, items_ratings: list):
+    def __init_new_row(self, items_ratings: list):
         """Create new row from given data.
         Used to handle predict requests
 
@@ -977,10 +955,10 @@ class RecSysMF(object):
         for (id, mark) in zip(items_ids, ratings):
             new_user_row[id] = mark
 
-        logger.info('init_new_row method successfully executed')
+        logger.info('__init_new_row method successfully executed')
         return new_user_row
 
-    def create_indexer_dict(self, items_ids: list):
+    def __create_indexer_dict(self, items_ids: list):
         """Create indexer for movie list
 
         Parameters
@@ -993,10 +971,10 @@ class RecSysMF(object):
         for i, val in enumerate(items_ids):
             indexer[val] = i
 
-        logger.info('create_indexer_dict method successfully executed')
+        logger.info('__create_indexer_dict method successfully executed')
         return indexer
 
-    def sort_items_by_ids(self, items: pd.DataFrame, items_ids: list):
+    def __sort_items_by_ids(self, items: pd.DataFrame, items_ids: list):
         """Method that sort movies in given dataframe
         by given list with ids
 
@@ -1008,7 +986,7 @@ class RecSysMF(object):
         """
 
         # create indexer
-        indexer = self.create_indexer_dict(items_ids)
+        indexer = self.__create_indexer_dict(items_ids)
 
         # get movies with id from items_ids
         items = items.loc[items['movie_id'].isin(items_ids), :]
@@ -1019,10 +997,10 @@ class RecSysMF(object):
         # get movies names
         names = items.sort_values('order')['title'].values.tolist()
 
-        logger.info('sort_items_by_ids method successfully executed')
+        logger.info('__sort_items_by_ids method successfully executed')
         return names
 
-    def set_evaluate_results(self, rmse: float):
+    def __set_evaluate_results(self, rmse: float):
         """Method that renew information about current model
 
         Parameters

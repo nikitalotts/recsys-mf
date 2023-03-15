@@ -89,6 +89,7 @@ class RecSysOptions():
         outputs:
         model_data_path: string # new full path to model data file
         """
+
         logger.info('started renew_model_name_and_path method')
         self.model_name = model_name
         self.model_data_path = os.path.join(self.model_store, f'{self.model_name}.{self.model_extention}')
