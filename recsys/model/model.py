@@ -823,9 +823,6 @@ class RecSysMF(object):
         # find top movie for every test user
         for (i, user_data) in enumerate(zip(user_to_user_similarity, std_user_rating, mean_user_rating)):
 
-            if i % 100 == 0 and i > 0:
-                break
-
             # find every movie estimated rating for every user
             # based on user to user similarity
             output = np.average(self.user_item_matrix, axis=0,
